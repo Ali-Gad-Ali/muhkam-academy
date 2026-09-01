@@ -1,5 +1,4 @@
-﻿'use client';
-/* oxlint-disable jsx-a11y/label-has-associated-control */
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -11,12 +10,10 @@ import {
   Bell,
   Check,
   ClipboardList,
-  Code2,
   Eye,
   FileCheck2,
   FileText,
   Gauge,
-  GripVertical,
   Loader2,
   LogOut,
   MessageCircle,
@@ -28,20 +25,19 @@ import {
   Users,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { defaultQuestions, defaultSettings } from '@/lib/defaults';
-import type {
-  ApplicationRecord,
-  DashboardPayload,
-  FormQuestion,
-  InvoiceRecord,
-  QuestionType,
-  SiteSettings,
-} from '@/lib/types';
+import type { ApplicationRecord, DashboardPayload, FormQuestion, InvoiceRecord, QuestionType, SiteSettings } from '@/lib/types';
 
 type AdminTab = 'overview' | 'applications' | 'questions' | 'invoices' | 'settings';
+
+const tabs: Array<[AdminTab, string, typeof Gauge]> = [
+  ['overview', 'نظرة عامة', Gauge],
+  ['applications', 'طلبات التقديم', Users],
+  ['questions', 'إدارة الأسئلة', ClipboardList],
+  ['invoices', 'الفواتير', FileText],
+  ['settings', 'الإعدادات', Settings],
+];
+
 const questionLabels: Record<QuestionType, string> = {
   short_text: 'نص قصير',
   long_text: 'نص طويل',
@@ -71,7 +67,9 @@ export function AdminDashboard() {
         }
         return response.json() as Promise<DashboardPayload>;
       })
-      .then((payload) => payload?.settings && setData(payload))
+      .then((payload) => {
+        if (payload?.settings) setData(payload);
+      })
       .catch(() => undefined)
       .finally(() => setLoading(false));
   }, []);
@@ -82,11 +80,8 @@ export function AdminDashboard() {
         const text = `${application.applicant_name} ${application.phone} ${application.email}`.toLowerCase();
         return text.includes(search.toLowerCase()) && (paymentFilter === 'all' || application.payment_status === paymentFilter);
       }),
-    [data.applications, search, paymentFilter],
+    [data.applications, paymentFilter, search],
   );
-  const paid = data.applications.filter((item) => item.payment_status === 'paid').length;
-  const pending = data.applications.filter((item) => item.payment_status === 'pending').length;
-  const revenue = data.invoices.filter((item) => item.status === 'issued').reduce((sum, item) => sum + Number(item.amount), 0);
 
   function flash(message: string) {
     setNotice(message);
@@ -106,8 +101,7 @@ export function AdminDashboard() {
       body: JSON.stringify(data.questions),
     });
     setSaving(false);
-    if (response.ok) flash('تم حفظ الأسئلة وترتيبها.');
-    else flash('تعذر حفظ الأسئلة.');
+    flash(response.ok ? 'تم حفظ الأسئلة.' : 'تعذر حفظ الأسئلة.');
   }
 
   async function addQuestion() {
@@ -130,11 +124,11 @@ export function AdminDashboard() {
     });
     const saved = response.ok ? ((await response.json()) as FormQuestion) : draft;
     setData((current) => ({ ...current, questions: [...current.questions, saved] }));
-    flash('تمت إضافة سؤال جديد.');
+    flash('تمت إضافة سؤال.');
   }
 
   async function deleteQuestion(id: string) {
-    if (!window.confirm('سيتم حذف السؤال وإلغاء أي شروط تعتمد عليه. هل تريد المتابعة؟')) return;
+    if (!window.confirm('هل تريد حذف السؤال؟')) return;
     await fetch(`/api/admin/questions?id=${id}`, { method: 'DELETE' });
     setData((current) => ({
       ...current,
@@ -151,10 +145,7 @@ export function AdminDashboard() {
       const target = index + direction;
       if (target < 0 || target >= questions.length) return current;
       [questions[index], questions[target]] = [questions[target], questions[index]];
-      return {
-        ...current,
-        questions: questions.map((q, i) => ({ ...q, position: i + 1 })),
-      };
+      return { ...current, questions: questions.map((question, position) => ({ ...question, position: position + 1 })) };
     });
   }
 
@@ -176,18 +167,18 @@ export function AdminDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: next.id, status: next.status, payment_status: next.payment_status }),
     });
-    if (response.ok) {
-      setData((current) => ({
-        ...current,
-        applications: current.applications.map((item) => (item.id === next.id ? next : item)),
-      }));
-      setSelected(next);
-      flash('تم تحديث حالة الطلب.');
-    }
+    if (!response.ok) return;
+    setData((current) => ({
+      ...current,
+      applications: current.applications.map((item) => (item.id === next.id ? next : item)),
+    }));
+    setSelected(next);
+    flash('تم تحديث الطلب.');
   }
 
   async function createInvoice(application: ApplicationRecord) {
-    const effectivePrice = Math.max(0, Number(data.settings.course_price) - Number(data.settings.course_discount_amount || 0));
+    const amount = Math.max(0, Number(data.settings.course_price) - Number(data.settings.course_discount_amount || 0));
+    const methodQuestionId = data.questions.find((question) => question.system_key === 'payment_method')?.id;
     const response = await fetch('/api/admin/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -195,9 +186,8 @@ export function AdminDashboard() {
         application_id: application.id,
         recipient_name: application.applicant_name || 'متقدم الكورس',
         phone: application.phone,
-        amount: effectivePrice,
-        payment_method:
-          application.answers.find((a) => a.questionId === data.questions.find((q) => q.system_key === 'payment_method')?.id)?.value || 'تحويل',
+        amount,
+        payment_method: application.answers.find((answer) => answer.questionId === methodQuestionId)?.value || 'تحويل',
       }),
     });
     const invoice = (await response.json()) as InvoiceRecord & { error?: string };
@@ -206,75 +196,59 @@ export function AdminDashboard() {
       return;
     }
     setData((current) => ({ ...current, invoices: [invoice, ...current.invoices] }));
-    flash('تم إنشاء الفاتورة بنجاح.');
     setTab('invoices');
+    flash('تم إنشاء الفاتورة.');
   }
 
   if (loading) {
     return (
-      <main className="admin-shell grid min-h-screen place-items-center">
-        <Loader2 className="size-8 animate-spin text-cyan-300" />
+      <main className="admin-loading">
+        <Loader2 className="spin" aria-hidden="true" />
       </main>
     );
   }
 
+  const paid = data.applications.filter((item) => item.payment_status === 'paid').length;
+  const pending = data.applications.filter((item) => item.payment_status === 'pending').length;
+  const revenue = data.invoices.filter((item) => item.status === 'issued').reduce((sum, item) => sum + Number(item.amount), 0);
+
   return (
-    <main className="admin-shell min-h-screen text-slate-100">
-      {notice && (
-        <div className="admin-toast">
-          <Check /> {notice}
-        </div>
-      )}
+    <main className="admin-layout">
+      {notice ? <div className="admin-toast"><Check aria-hidden="true" /> {notice}</div> : null}
 
       <aside className="admin-sidebar">
-        <div className="flex items-center gap-3 px-2">
-          <span className="brand-mark"><Code2 /></span>
-          <div>
-            <strong className="text-sm text-white">MUHKAM</strong>
-            <span className="block text-[9px] tracking-[.18em] text-cyan-300/60">ADMIN</span>
-          </div>
+        <div className="admin-logo">
+          <strong>MUHKAM</strong>
+          <span>Admin</span>
         </div>
-
-        <nav className="mt-9 space-y-1">
-          {([
-            ['overview', 'نظرة عامة', Gauge],
-            ['applications', 'طلبات التقديم', Users],
-            ['questions', 'إدارة الأسئلة', ClipboardList],
-            ['invoices', 'الفواتير', FileText],
-            ['settings', 'الإعدادات', Settings],
-          ] as const).map(([id, label, Icon]) => (
-            <button key={id} className={`admin-nav ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}>
-              <Icon />
-              <span>{label}</span>
-              {id === 'applications' && <b>{data.applications.length}</b>}
+        <nav>
+          {tabs.map(([id, label, Icon]) => (
+            <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
+              <Icon aria-hidden="true" />
+              {label}
+              {id === 'applications' ? <b>{data.applications.length}</b> : null}
             </button>
           ))}
         </nav>
-
-        <div className="mt-auto">
-          <Link href="/apply" className="admin-nav"><Eye /> عرض صفحة التقديم</Link>
-          <button className="admin-nav mt-1 text-red-200/80" onClick={logout}><LogOut /> تسجيل الخروج</button>
+        <div className="sidebar-actions">
+          <Link href="/apply"><Eye aria-hidden="true" /> عرض التقديم</Link>
+          <button onClick={logout}><LogOut aria-hidden="true" /> تسجيل الخروج</button>
         </div>
       </aside>
 
-      <section className="admin-content">
-        <header className="admin-topbar">
+      <section className="admin-main">
+        <header className="admin-header">
           <div>
-            <p className="text-xs text-cyan-300/75">لوحة تحكم Muhkam Academy</p>
-            <h1 className="mt-1 text-2xl font-black text-white">
-              {tab === 'overview' ? 'أهلًا بك 👋' : ({ applications: 'طلبات التقديم', questions: 'إدارة أسئلة الفورم', invoices: 'الفواتير', settings: 'إعدادات الموقع' } as Record<string, string>)[tab]}
-            </h1>
+            <span>لوحة تحكم Muhkam Academy</span>
+            <h1>{tab === 'overview' ? 'نظرة عامة' : tabs.find(([id]) => id === tab)?.[1]}</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="icon-button"><Bell /></button>
-            <span className="admin-avatar">MA</span>
-          </div>
+          <button className="icon-button" aria-label="التنبيهات"><Bell aria-hidden="true" /></button>
         </header>
 
-        {data.demo && <div className="demo-banner">أنت الآن في وضع المعاينة. أضف مفاتيح Supabase لتصبح كل التغييرات محفوظة فعليًا.</div>}
+        {data.demo ? <div className="demo-banner">أنت في وضع المعاينة. أضف مفاتيح Supabase على Vercel لتفعيل الحفظ الحقيقي.</div> : null}
 
-        {tab === 'overview' && <Overview applications={data.applications} paid={paid} pending={pending} revenue={revenue} setTab={setTab} />}
-        {tab === 'applications' && (
+        {tab === 'overview' ? <Overview applications={data.applications} paid={paid} pending={pending} revenue={revenue} setTab={setTab} /> : null}
+        {tab === 'applications' ? (
           <Applications
             applications={filtered}
             search={search}
@@ -285,75 +259,309 @@ export function AdminDashboard() {
             setSelected={setSelected}
             updateApplication={updateApplication}
             createInvoice={createInvoice}
-            invoices={data.invoices}
           />
-        )}
-        {tab === 'questions' && <Questions questions={data.questions} setData={setData} addQuestion={addQuestion} deleteQuestion={deleteQuestion} moveQuestion={moveQuestion} saveQuestions={saveQuestions} saving={saving} />}
-        {tab === 'invoices' && <Invoices invoices={data.invoices} settings={data.settings} />}
-        {tab === 'settings' && <SettingsPanel settings={data.settings} setData={setData} save={saveSettings} saving={saving} />}
+        ) : null}
+        {tab === 'questions' ? <Questions questions={data.questions} setData={setData} addQuestion={addQuestion} deleteQuestion={deleteQuestion} moveQuestion={moveQuestion} saveQuestions={saveQuestions} saving={saving} /> : null}
+        {tab === 'invoices' ? <Invoices invoices={data.invoices} settings={data.settings} /> : null}
+        {tab === 'settings' ? <SettingsPanel settings={data.settings} setData={setData} save={saveSettings} saving={saving} /> : null}
       </section>
     </main>
   );
 }
 
-function Stat({ title, value, detail, Icon, tone }: { title: string; value: string | number; detail: string; Icon: typeof Users; tone: string }) {
+function Overview({ applications, paid, pending, revenue, setTab }: { applications: ApplicationRecord[]; paid: number; pending: number; revenue: number; setTab: (tab: AdminTab) => void }) {
   return (
-    <article className="admin-card stat-card">
-      <span className={`stat-icon ${tone}`}><Icon /></span>
-      <div>
-        <p className="text-xs text-slate-400">{title}</p>
-        <strong className="mt-2 block text-3xl text-white">{value}</strong>
-        <span className="mt-1 block text-xs text-slate-500">{detail}</span>
+    <div className="stack">
+      <div className="stats-grid">
+        <Stat title="إجمالي المتقدمين" value={applications.length} Icon={Users} />
+        <Stat title="بانتظار المراجعة" value={pending} Icon={FileCheck2} />
+        <Stat title="مدفوع" value={paid} Icon={BadgeCheck} />
+        <Stat title="إجمالي الفواتير" value={`${revenue.toLocaleString('ar-EG')} ج.م`} Icon={Banknote} />
+      </div>
+      <article className="admin-card">
+        <div className="card-heading">
+          <div>
+            <h2>أحدث الطلبات</h2>
+            <p>آخر المتقدمين للكورس</p>
+          </div>
+          <button className="text-button" onClick={() => setTab('applications')}>عرض الكل</button>
+        </div>
+        <ApplicationsTable applications={applications.slice(0, 5)} onSelect={() => undefined} compact />
+      </article>
+    </div>
+  );
+}
+
+function Stat({ title, value, Icon }: { title: string; value: string | number; Icon: typeof Users }) {
+  return (
+    <article className="stat-card">
+      <span><Icon aria-hidden="true" /></span>
+      <p>{title}</p>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function Applications(props: {
+  applications: ApplicationRecord[];
+  search: string;
+  setSearch: (value: string) => void;
+  paymentFilter: string;
+  setPaymentFilter: (value: string) => void;
+  selected: ApplicationRecord | null;
+  setSelected: (value: ApplicationRecord | null) => void;
+  updateApplication: (application: ApplicationRecord, changes: Partial<ApplicationRecord>) => void;
+  createInvoice: (application: ApplicationRecord) => void;
+}) {
+  return (
+    <div className="admin-split">
+      <article className="admin-card">
+        <div className="filters-row">
+          <label className="search-input">
+            <Search aria-hidden="true" />
+            <input value={props.search} onChange={(event) => props.setSearch(event.target.value)} placeholder="ابحث بالاسم أو الهاتف أو البريد" />
+          </label>
+          <select value={props.paymentFilter} onChange={(event) => props.setPaymentFilter(event.target.value)} aria-label="حالة الدفع">
+            <option value="all">كل حالات الدفع</option>
+            <option value="pending">قيد المراجعة</option>
+            <option value="paid">مدفوع</option>
+            <option value="rejected">مرفوض</option>
+          </select>
+        </div>
+        <ApplicationsTable applications={props.applications} onSelect={props.setSelected} />
+      </article>
+
+      <aside className="admin-card detail-panel">
+        {props.selected ? (
+          <>
+            <span className="mini-label">تفاصيل الطلب</span>
+            <h2>{props.selected.applicant_name || 'بدون اسم'}</h2>
+            <dl>
+              <div><dt>الهاتف</dt><dd dir="ltr">{props.selected.phone}</dd></div>
+              <div><dt>البريد</dt><dd dir="ltr">{props.selected.email}</dd></div>
+              <div><dt>حالة الطلب</dt><dd><StatusBadge value={props.selected.status} /></dd></div>
+              <div><dt>حالة الدفع</dt><dd><StatusBadge value={props.selected.payment_status} /></dd></div>
+            </dl>
+            <div className="detail-actions">
+              <button onClick={() => props.updateApplication(props.selected!, { status: 'reviewing' })}>قيد المراجعة</button>
+              <button onClick={() => props.updateApplication(props.selected!, { status: 'accepted', payment_status: 'paid' })}>قبول الدفع</button>
+              <button onClick={() => props.updateApplication(props.selected!, { status: 'rejected', payment_status: 'rejected' })}>رفض</button>
+            </div>
+            <button className="primary-button submit-wide" onClick={() => props.createInvoice(props.selected!)}>إنشاء فاتورة</button>
+            {props.selected.payment_proof_url ? <a className="text-button" href={props.selected.payment_proof_url} target="_blank" rel="noreferrer">فتح إثبات الدفع</a> : null}
+          </>
+        ) : (
+          <div className="empty-state">
+            <Users aria-hidden="true" />
+            <p>اختر طلبا لعرض تفاصيله.</p>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+function ApplicationsTable({ applications, onSelect, compact = false }: { applications: ApplicationRecord[]; onSelect: (application: ApplicationRecord) => void; compact?: boolean }) {
+  if (!applications.length) return <div className="empty-state"><p>لا توجد طلبات حتى الآن.</p></div>;
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>المتقدم</th>
+            <th>التواصل</th>
+            <th>حالة الطلب</th>
+            <th>الدفع</th>
+            {!compact ? <th>إجراءات</th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {applications.map((application) => (
+            <tr key={application.id} onClick={() => onSelect(application)}>
+              <td>
+                <strong>{application.applicant_name || 'بدون اسم'}</strong>
+                <small>{new Date(application.created_at).toLocaleDateString('ar-EG')}</small>
+              </td>
+              <td>
+                <span dir="ltr">{application.phone}</span>
+                <small dir="ltr">{application.email}</small>
+              </td>
+              <td><StatusBadge value={application.status} /></td>
+              <td><StatusBadge value={application.payment_status} /></td>
+              {!compact ? <td><button className="icon-button" aria-label="عرض"><Eye aria-hidden="true" /></button></td> : null}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Questions(props: {
+  questions: FormQuestion[];
+  setData: React.Dispatch<React.SetStateAction<DashboardPayload>>;
+  addQuestion: () => void;
+  deleteQuestion: (id: string) => void;
+  moveQuestion: (index: number, direction: -1 | 1) => void;
+  saveQuestions: () => void;
+  saving: boolean;
+}) {
+  function update(id: string, changes: Partial<FormQuestion>) {
+    props.setData((current) => ({
+      ...current,
+      questions: current.questions.map((question) => (question.id === id ? { ...question, ...changes } : question)),
+    }));
+  }
+
+  return (
+    <div className="stack">
+      <div className="toolbar-row">
+        <p>عدّل أسئلة نموذج التقديم وترتيبها، ثم احفظ التغييرات.</p>
+        <div>
+          <button className="secondary-button" onClick={props.addQuestion}><Plus aria-hidden="true" /> إضافة سؤال</button>
+          <button className="primary-button" onClick={props.saveQuestions} disabled={props.saving}>
+            {props.saving ? <Loader2 className="spin" aria-hidden="true" /> : <Save aria-hidden="true" />}
+            حفظ
+          </button>
+        </div>
+      </div>
+      {props.questions.map((question, index) => (
+        <article className="question-card" key={question.id}>
+          <div className="question-fields">
+            <label>
+              نص السؤال
+              <input value={question.label} onChange={(event) => update(question.id, { label: event.target.value })} />
+            </label>
+            <label>
+              نوع الإجابة
+              <select value={question.type} onChange={(event) => update(question.id, { type: event.target.value as QuestionType })}>
+                {Object.entries(questionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label>
+              الحالة
+              <select value={question.required ? 'required' : 'optional'} onChange={(event) => update(question.id, { required: event.target.value === 'required' })}>
+                <option value="required">مطلوب</option>
+                <option value="optional">اختياري</option>
+              </select>
+            </label>
+          </div>
+          <div className="row-actions">
+            <button className="icon-button" onClick={() => props.moveQuestion(index, -1)} aria-label="نقل لأعلى"><ArrowUp aria-hidden="true" /></button>
+            <button className="icon-button" onClick={() => props.moveQuestion(index, 1)} aria-label="نقل لأسفل"><ArrowDown aria-hidden="true" /></button>
+            <button className="icon-button danger" onClick={() => props.deleteQuestion(question.id)} aria-label="حذف"><Trash2 aria-hidden="true" /></button>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function Invoices({ invoices, settings }: { invoices: InvoiceRecord[]; settings: SiteSettings }) {
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  if (!invoices.length) return <article className="admin-card empty-state"><FileText aria-hidden="true" /><p>لا توجد فواتير بعد.</p></article>;
+  return (
+    <article className="admin-card">
+      <div className="card-heading">
+        <div>
+          <h2>الفواتير الصادرة</h2>
+          <p>روابط قابلة للطباعة والمشاركة والتحقق</p>
+        </div>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>رقم الفاتورة</th>
+              <th>المستلم</th>
+              <th>القيمة</th>
+              <th>التاريخ</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.map((invoice) => {
+              const url = `${origin}/invoice/${invoice.public_token}`;
+              const message = `مرحبا ${invoice.recipient_name}، هذه فاتورتك من ${settings.brand_name}: ${url}`;
+              return (
+                <tr key={invoice.id}>
+                  <td dir="ltr">{invoice.invoice_number}</td>
+                  <td>{invoice.recipient_name}<small dir="ltr">{invoice.phone}</small></td>
+                  <td>{Number(invoice.amount).toLocaleString('ar-EG')} ج.م</td>
+                  <td>{new Date(invoice.issued_at).toLocaleDateString('ar-EG')}</td>
+                  <td>
+                    <div className="row-actions">
+                      <a className="icon-button" href={`/invoice/${invoice.public_token}`} target="_blank" aria-label="عرض الفاتورة"><Eye aria-hidden="true" /></a>
+                      <a className="icon-button" href={`https://wa.me/${invoice.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`} target="_blank" aria-label="مشاركة واتساب"><MessageCircle aria-hidden="true" /></a>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </article>
   );
 }
 
-function Overview({ applications, paid, pending, revenue, setTab }: { applications: ApplicationRecord[]; paid: number; pending: number; revenue: number; setTab: (tab: AdminTab) => void }) {
+function SettingsPanel({ settings, setData, save, saving }: { settings: SiteSettings; setData: React.Dispatch<React.SetStateAction<DashboardPayload>>; save: () => void; saving: boolean }) {
+  function update(changes: Partial<SiteSettings>) {
+    setData((current) => ({ ...current, settings: { ...current.settings, ...changes } }));
+  }
+
+  function updateGuideItem(id: string, changes: Partial<{ title: string; description: string }>) {
+    setData((current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        guide_items: current.settings.guide_items.map((item) => (item.id === id ? { ...item, ...changes } : item)),
+      },
+    }));
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="stats-grid">
-        <Stat title="إجمالي المتقدمين" value={applications.length} detail="كل طلبات التسجيل" Icon={Users} tone="cyan" />
-        <Stat title="بانتظار المراجعة" value={pending} detail="يحتاجون مراجعة الدفع" Icon={FileCheck2} tone="violet" />
-        <Stat title="مدفوع" value={paid} detail="تم اعتماد الدفع" Icon={BadgeCheck} tone="green" />
-        <Stat title="إجمالي الفواتير" value={`${revenue.toLocaleString('ar-EG')} ج.م`} detail="قيمة الفواتير الصادرة" Icon={Banknote} tone="amber" />
-      </div>
-
-      <article className="admin-card">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-white">أحدث الطلبات</h2>
-            <p className="mt-1 text-xs text-slate-500">آخر المتقدمين للكورس</p>
-          </div>
-          <Button variant="ghost" onClick={() => setTab('applications')}>عرض الكل</Button>
+    <div className="settings-grid">
+      <article className="admin-card admin-form">
+        <h2>بيانات الكورس والموقع</h2>
+        <label>اسم العلامة<input value={settings.brand_name} onChange={(event) => update({ brand_name: event.target.value })} /></label>
+        <label>اسم الكورس<input value={settings.course_name} onChange={(event) => update({ course_name: event.target.value })} /></label>
+        <label>وصف الكورس<textarea value={settings.course_description} onChange={(event) => update({ course_description: event.target.value })} /></label>
+        <div className="two-cols">
+          <label>السعر الأساسي<input type="number" value={settings.course_price} onChange={(event) => update({ course_price: Number(event.target.value) })} /></label>
+          <label>قيمة الخصم<input type="number" value={settings.course_discount_amount} onChange={(event) => update({ course_discount_amount: Number(event.target.value) })} /></label>
         </div>
-
-        <div className="mt-4 overflow-hidden rounded-xl border border-white/6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>المتقدم</TableHead>
-                <TableHead>الهاتف</TableHead>
-                <TableHead>الدفع</TableHead>
-                <TableHead>وقت التقديم</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {applications.slice(0, 5).map((app) => (
-                <TableRow key={app.id}>
-                  <TableCell>
-                    <strong>{app.applicant_name || 'بدون اسم'}</strong>
-                    <span className="block text-xs text-slate-500">{app.email}</span>
-                  </TableCell>
-                  <TableCell dir="ltr" className="text-right">{app.phone}</TableCell>
-                  <TableCell><StatusBadge value={app.payment_status} /></TableCell>
-                  <TableCell>{new Date(app.created_at).toLocaleDateString('ar-EG')}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <label>حالة التسجيل<select value={settings.registration_open ? 'open' : 'closed'} onChange={(event) => update({ registration_open: event.target.value === 'open' })}><option value="open">مفتوح</option><option value="closed">مغلق</option></select></label>
+        <label>رقم واتساب الإدارة<input dir="ltr" value={settings.whatsapp_number} onChange={(event) => update({ whatsapp_number: event.target.value })} /></label>
       </article>
+
+      <article className="admin-card admin-form">
+        <h2>الفاتورة والتحقق</h2>
+        <label>اسم الشركة في الفاتورة<input value={settings.invoice_company_name} onChange={(event) => update({ invoice_company_name: event.target.value })} /></label>
+        <label>عنوان الشركة<textarea value={settings.invoice_address} onChange={(event) => update({ invoice_address: event.target.value })} /></label>
+        <label>الرقم الضريبي<input value={settings.invoice_tax_number} onChange={(event) => update({ invoice_tax_number: event.target.value })} /></label>
+        <label>رسالة التحقق<textarea value={settings.verification_message} onChange={(event) => update({ verification_message: event.target.value })} /></label>
+        <label>رابط إضافي للتحقق<input value={settings.verification_link} onChange={(event) => update({ verification_link: event.target.value })} /></label>
+      </article>
+
+      <article className="admin-card admin-form settings-wide">
+        <h2>قسم الهداية بعد الكورس</h2>
+        <label>عنوان القسم<input value={settings.guide_title} onChange={(event) => update({ guide_title: event.target.value })} /></label>
+        <label>وصف القسم<textarea value={settings.guide_intro} onChange={(event) => update({ guide_intro: event.target.value })} /></label>
+        {settings.guide_items.map((item, index) => (
+          <div className="nested-card" key={item.id}>
+            <label>عنوان العنصر {index + 1}<input value={item.title} onChange={(event) => updateGuideItem(item.id, { title: event.target.value })} /></label>
+            <label>النص<textarea value={item.description} onChange={(event) => updateGuideItem(item.id, { description: event.target.value })} /></label>
+          </div>
+        ))}
+      </article>
+
+      <div className="settings-actions">
+        <button className="primary-button" onClick={save} disabled={saving}>
+          {saving ? <Loader2 className="spin" aria-hidden="true" /> : <Save aria-hidden="true" />}
+          حفظ الإعدادات
+        </button>
+      </div>
     </div>
   );
 }
@@ -368,349 +576,4 @@ function StatusBadge({ value }: { value: string }) {
     accepted: 'مقبول',
   };
   return <span className={`status-badge status-${value}`}>{labels[value] || value}</span>;
-}
-
-function Applications({
-  applications,
-  search,
-  setSearch,
-  paymentFilter,
-  setPaymentFilter,
-  selected,
-  setSelected,
-  updateApplication,
-  createInvoice,
-  invoices,
-}: {
-  applications: ApplicationRecord[];
-  search: string;
-  setSearch: (v: string) => void;
-  paymentFilter: string;
-  setPaymentFilter: (v: string) => void;
-  selected: ApplicationRecord | null;
-  setSelected: (v: ApplicationRecord | null) => void;
-  updateApplication: (a: ApplicationRecord, c: Partial<ApplicationRecord>) => void;
-  createInvoice: (a: ApplicationRecord) => void;
-  invoices: InvoiceRecord[];
-}) {
-  return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-      <article className="admin-card min-w-0">
-        <div className="mb-5 flex flex-wrap gap-3">
-          <div className="search-box">
-            <Search />
-            <Input aria-label="البحث في الطلبات" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث بالاسم أو الهاتف أو البريد" />
-          </div>
-          <select aria-label="تصفية حالة الدفع" className="admin-select" value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
-            <option value="all">كل حالات الدفع</option>
-            <option value="pending">قيد المراجعة</option>
-            <option value="paid">مدفوع</option>
-            <option value="rejected">مرفوض</option>
-          </select>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>المتقدم</TableHead>
-              <TableHead>التواصل</TableHead>
-              <TableHead>حالة الطلب</TableHead>
-              <TableHead>الدفع</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {applications.map((app) => (
-              <TableRow key={app.id} className="cursor-pointer" onClick={() => setSelected(app)}>
-                <TableCell>
-                  <strong>{app.applicant_name || 'بدون اسم'}</strong>
-                  <span className="block text-xs text-slate-500">{new Date(app.created_at).toLocaleDateString('ar-EG')}</span>
-                </TableCell>
-                <TableCell>
-                  <span dir="ltr">{app.phone}</span>
-                  <span className="block text-xs text-slate-500">{app.email}</span>
-                </TableCell>
-                <TableCell><StatusBadge value={app.status} /></TableCell>
-                <TableCell><StatusBadge value={app.payment_status} /></TableCell>
-                <TableCell><Button aria-label="عرض الطلب" size="icon-sm" variant="ghost"><Eye /></Button></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </article>
-
-      <aside className="admin-card min-h-[300px]">
-        {selected ? (
-          <div className="space-y-5">
-            <div>
-              <p className="text-xs text-cyan-300/70">تفاصيل الطلب</p>
-              <h3 className="mt-2 text-xl font-black text-white">{selected.applicant_name}</h3>
-            </div>
-
-            <div className="space-y-3 text-sm text-slate-300">
-              <p><strong>الهاتف:</strong> <span dir="ltr">{selected.phone}</span></p>
-              <p><strong>البريد:</strong> <span dir="ltr">{selected.email}</span></p>
-              <p><strong>حالة الطلب:</strong> <StatusBadge value={selected.status} /></p>
-              <p><strong>حالة الدفع:</strong> <StatusBadge value={selected.payment_status} /></p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="border-white/10 bg-white/5" onClick={() => updateApplication(selected, { status: 'reviewing' })}>تعيين قيد المراجعة</Button>
-              <Button variant="outline" className="border-emerald-400/20 bg-emerald-500/10 text-emerald-200" onClick={() => updateApplication(selected, { status: 'accepted', payment_status: 'paid' })}>قبول</Button>
-              <Button variant="outline" className="border-red-400/20 bg-red-500/10 text-red-200" onClick={() => updateApplication(selected, { status: 'rejected', payment_status: 'rejected' })}>رفض</Button>
-            </div>
-
-            <Button className="submit-button w-full" onClick={() => createInvoice(selected)}>إنشاء فاتورة</Button>
-            {selected.payment_proof_url && <a href={selected.payment_proof_url} target="_blank" rel="noreferrer" className="inline-block text-sm text-cyan-300">فتح إثبات الدفع</a>}
-          </div>
-        ) : (
-          <div className="grid h-full place-items-center text-center text-slate-500">
-            <div>
-              <Users className="mx-auto mb-3 size-9" />
-              <p>اختر طلبًا لعرض تفاصيله.</p>
-            </div>
-          </div>
-        )}
-      </aside>
-    </div>
-  );
-}
-
-function Questions({ questions, setData, addQuestion, deleteQuestion, moveQuestion, saveQuestions, saving }: { questions: FormQuestion[]; setData: React.Dispatch<React.SetStateAction<DashboardPayload>>; addQuestion: () => void; deleteQuestion: (id: string) => void; moveQuestion: (i: number, d: -1 | 1) => void; saveQuestions: () => void; saving: boolean }) {
-  function update(id: string, changes: Partial<FormQuestion>) {
-    setData((current) => ({
-      ...current,
-      questions: current.questions.map((q) => (q.id === id ? { ...q, ...changes } : q)),
-    }));
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-sm leading-6 text-slate-400">يمكنك تعديل كل سؤال أو حذفه أو تغيير ترتيبه. الإجابات القديمة ستظل محفوظة بعنوان السؤال وقت التقديم.</p>
-        <div className="flex gap-2">
-          <Button variant="outline" className="border-white/10 bg-white/5" onClick={addQuestion}><Plus /> إضافة سؤال</Button>
-          <Button className="submit-button" onClick={saveQuestions} disabled={saving}>{saving ? <Loader2 className="animate-spin" /> : <Save />} حفظ التغييرات</Button>
-        </div>
-      </div>
-
-      {questions.map((question, index) => (
-        <article className="admin-card question-row" key={question.id}>
-          <div className="drag-handle"><GripVertical /></div>
-          <div className="grid flex-1 gap-4 lg:grid-cols-[1.4fr_.7fr_.7fr]">
-            <label className="admin-field">
-              <span>نص السؤال</span>
-              <Input value={question.label} onChange={(e) => update(question.id, { label: e.target.value })} />
-            </label>
-            <label className="admin-field">
-              <span>نوع الإجابة</span>
-              <select value={question.type} onChange={(e) => update(question.id, { type: e.target.value as QuestionType })}>
-                {Object.entries(questionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            <label className="admin-field">
-              <span>الحالة</span>
-              <select value={question.required ? 'required' : 'optional'} onChange={(e) => update(question.id, { required: e.target.value === 'required' })}>
-                <option value="required">مطلوب</option>
-                <option value="optional">اختياري</option>
-              </select>
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <button type="button" className="icon-button" onClick={() => moveQuestion(index, -1)} aria-label="نقل لأعلى"><ArrowUp /></button>
-            <button type="button" className="icon-button" onClick={() => moveQuestion(index, 1)} aria-label="نقل لأسفل"><ArrowDown /></button>
-            <button type="button" className="icon-button danger" onClick={() => deleteQuestion(question.id)} aria-label="حذف السؤال"><Trash2 /></button>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function Invoices({ invoices, settings }: { invoices: InvoiceRecord[]; settings: SiteSettings }) {
-  const origin = typeof window === 'undefined' ? '' : window.location.origin;
-
-  return (
-    <article className="admin-card">
-      <div className="mb-5">
-        <h2 className="font-bold text-white">الفواتير الصادرة</h2>
-        <p className="mt-1 text-xs text-slate-500">روابط قابلة للطباعة والمشاركة والتحقق عبر QR</p>
-      </div>
-
-      {invoices.length ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>رقم الفاتورة</TableHead>
-              <TableHead>المستلم</TableHead>
-              <TableHead>القيمة</TableHead>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>إجراءات</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {invoices.map((invoice) => {
-              const url = `${origin}/invoice/${invoice.public_token}`;
-              const message = `مرحبًا ${invoice.recipient_name}، هذه فاتورتك من ${settings.brand_name}: ${url}`;
-
-              return (
-                <TableRow key={invoice.id}>
-                  <TableCell dir="ltr" className="text-right font-mono text-cyan-200">{invoice.invoice_number}</TableCell>
-                  <TableCell>
-                    {invoice.recipient_name}
-                    <span dir="ltr" className="block text-xs text-slate-500">{invoice.phone}</span>
-                  </TableCell>
-                  <TableCell>{Number(invoice.amount).toLocaleString('ar-EG')} ج.م</TableCell>
-                  <TableCell>{new Date(invoice.issued_at).toLocaleDateString('ar-EG')}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button aria-label="عرض الفاتورة" size="icon-sm" variant="ghost" render={<a aria-label="عرض الفاتورة" href={`/invoice/${invoice.public_token}`} target="_blank">عرض</a>}><Eye /></Button>
-                      <Button aria-label="مشاركة الفاتورة عبر واتساب" size="icon-sm" variant="ghost" render={<a aria-label="مشاركة الفاتورة عبر واتساب" href={`https://wa.me/${invoice.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`} target="_blank">واتساب</a>}><MessageCircle /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      ) : (
-        <div className="grid min-h-72 place-items-center text-center text-slate-500">
-          <div>
-            <FileText className="mx-auto mb-3 size-9" />
-            <p>لا توجد فواتير بعد.</p>
-            <span className="mt-1 block text-xs">اعتمد دفع أحد الطلبات ثم أنشئ فاتورته.</span>
-          </div>
-        </div>
-      )}
-    </article>
-  );
-}
-
-function SettingsPanel({ settings, setData, save, saving }: { settings: SiteSettings; setData: React.Dispatch<React.SetStateAction<DashboardPayload>>; save: () => void; saving: boolean }) {
-  function update(changes: Partial<SiteSettings>) {
-    setData((current) => ({ ...current, settings: { ...current.settings, ...changes } }));
-  }
-
-  function updateGuideItem(id: string, patch: Partial<{ title: string; description: string }>) {
-    setData((current) => ({
-      ...current,
-      settings: {
-        ...current.settings,
-        guide_items: current.settings.guide_items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-      },
-    }));
-  }
-
-  return (
-    <div className="grid gap-6 xl:grid-cols-2">
-      <article className="admin-card space-y-5">
-        <div>
-          <h2 className="font-bold text-white">بيانات الكورس والموقع</h2>
-          <p className="mt-1 text-xs text-slate-500">تظهر مباشرة في صفحة التقديم.</p>
-        </div>
-
-        <label className="admin-field">
-          <span>اسم العلامة</span>
-          <Input value={settings.brand_name} onChange={(e) => update({ brand_name: e.target.value })} />
-        </label>
-
-        <label className="admin-field">
-          <span>اسم الكورس</span>
-          <Input value={settings.course_name} onChange={(e) => update({ course_name: e.target.value })} />
-        </label>
-
-        <label className="admin-field">
-          <span>وصف الكورس</span>
-          <textarea value={settings.course_description} onChange={(e) => update({ course_description: e.target.value })} />
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="admin-field">
-            <span>السعر الأساسي</span>
-            <Input type="number" value={settings.course_price} onChange={(e) => update({ course_price: Number(e.target.value) })} />
-          </label>
-          <label className="admin-field">
-            <span>قيمة الخصم</span>
-            <Input type="number" value={settings.course_discount_amount} onChange={(e) => update({ course_discount_amount: Number(e.target.value) })} />
-          </label>
-        </div>
-
-        <label className="admin-field">
-          <span>حالة التسجيل</span>
-          <select value={settings.registration_open ? 'open' : 'closed'} onChange={(e) => update({ registration_open: e.target.value === 'open' })}>
-            <option value="open">مفتوح</option>
-            <option value="closed">مغلق</option>
-          </select>
-        </label>
-
-        <label className="admin-field">
-          <span>رقم واتساب الإدارة</span>
-          <Input dir="ltr" className="text-left" value={settings.whatsapp_number} onChange={(e) => update({ whatsapp_number: e.target.value })} />
-        </label>
-
-        <div className="rounded-2xl border border-cyan-400/15 bg-slate-950/40 p-4">
-          <h3 className="mb-3 font-bold text-white">قسم الهداية بعد إكمال الكورس</h3>
-
-          <label className="admin-field">
-            <span>عنوان القسم</span>
-            <Input value={settings.guide_title} onChange={(e) => update({ guide_title: e.target.value })} />
-          </label>
-
-          <label className="admin-field">
-            <span>وصف القسم</span>
-            <textarea value={settings.guide_intro} onChange={(e) => update({ guide_intro: e.target.value })} />
-          </label>
-
-          {settings.guide_items.map((item, index) => (
-            <div key={item.id} className="mt-3 space-y-2 rounded-xl border border-white/8 bg-slate-900/40 p-3">
-              <label className="admin-field">
-                <span>عنوان العنصر {index + 1}</span>
-                <Input value={item.title} onChange={(e) => updateGuideItem(item.id, { title: e.target.value })} />
-              </label>
-              <label className="admin-field">
-                <span>نص العنصر</span>
-                <textarea value={item.description} onChange={(e) => updateGuideItem(item.id, { description: e.target.value })} />
-              </label>
-            </div>
-          ))}
-        </div>
-      </article>
-
-      <article className="admin-card space-y-5">
-        <div>
-          <h2 className="font-bold text-white">الفاتورة وصفحة التحقق</h2>
-          <p className="mt-1 text-xs text-slate-500">يظهر QR الفريد تلقائيًا في كل فاتورة.</p>
-        </div>
-
-        <label className="admin-field">
-          <span>اسم الشركة في الفاتورة</span>
-          <Input value={settings.invoice_company_name} onChange={(e) => update({ invoice_company_name: e.target.value })} />
-        </label>
-
-        <label className="admin-field">
-          <span>عنوان الشركة</span>
-          <textarea value={settings.invoice_address} onChange={(e) => update({ invoice_address: e.target.value })} />
-        </label>
-
-        <label className="admin-field">
-          <span>الرقم الضريبي</span>
-          <Input value={settings.invoice_tax_number} onChange={(e) => update({ invoice_tax_number: e.target.value })} />
-        </label>
-
-        <label className="admin-field">
-          <span>رسالة صفحة التحقق</span>
-          <textarea value={settings.verification_message} onChange={(e) => update({ verification_message: e.target.value })} />
-        </label>
-
-        <label className="admin-field">
-          <span>رابط التحقق</span>
-          <Input value={settings.verification_link} onChange={(e) => update({ verification_link: e.target.value })} />
-        </label>
-      </article>
-
-      <div className="xl:col-span-2 flex justify-end">
-        <Button className="submit-button" onClick={save} disabled={saving}>{saving ? <Loader2 className="animate-spin" /> : <Save />} حفظ الإعدادات</Button>
-      </div>
-    </div>
-  );
 }

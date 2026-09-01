@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { AdminDashboard } from '@/components/admin-dashboard';
-import { isLocalDemo, validateAdminToken } from '@/lib/supabase-server';
+import { validateAdminToken } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
