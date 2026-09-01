@@ -1,8 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Code2, Loader2, MessageCircle, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Loader2, MessageCircle, UploadCloud } from 'lucide-react';
 
 import { defaultQuestions, defaultSettings } from '@/lib/defaults';
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
@@ -75,11 +76,7 @@ export function ApplicationForm() {
     <main className="public-page">
       <header className="topbar">
         <Link className="brand" href="/">
-          <span className="brand-icon"><Code2 aria-hidden="true" /></span>
-          <span>
-            <strong>{settings.brand_name}</strong>
-            <small>Application form</small>
-          </span>
+          <Image src="/muhkam-logo.png" alt={settings.brand_name} width={760} height={240} priority className="brand-logo-image" />
         </Link>
         <a className="ghost-link" href={whatsappUrl} target="_blank" rel="noreferrer">
           <MessageCircle aria-hidden="true" />

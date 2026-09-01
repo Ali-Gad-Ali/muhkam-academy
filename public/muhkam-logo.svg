@@ -1,0 +1,31 @@
+<svg width="1600" height="700" viewBox="0 0 1600 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandGradient" x1="300" y1="120" x2="1200" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4DE4FF"/>
+      <stop offset="0.35" stop-color="#41D1FF"/>
+      <stop offset="0.7" stop-color="#7B68FF"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="1020" y1="260" x2="1530" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="0.5" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#22D3EE" flood-opacity="0.8"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#8B5CF6" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#glow)">
+    <text x="160" y="300" font-size="200" font-weight="900" fill="#F8FAFC" font-family="Segoe UI, Tahoma, Arial, sans-serif" letter-spacing="-8">Muhkam</text>
+
+    <text x="250" y="490" font-size="190" font-weight="900" fill="url(#brandGradient)" font-family="Segoe UI, Tahoma, Arial, sans-serif" letter-spacing="-8">Academy</text>
+
+    <g transform="translate(1120 185)">
+      <path d="M22 25L-25 75L22 125H94L41 75L94 25H22Z" fill="none" stroke="url(#accentGradient)" stroke-width="18" stroke-linejoin="round"/>
+      <path d="M194 25L240 75L194 125H122L175 75L122 25H194Z" fill="none" stroke="url(#accentGradient)" stroke-width="18" stroke-linejoin="round"/>
+      <path d="M95 170L217 0" stroke="url(#accentGradient)" stroke-width="18" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

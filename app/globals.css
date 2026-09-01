@@ -78,10 +78,25 @@ svg {
   gap: 18px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+}
+
+.brand-logo-image {
+  display: block;
+  width: auto;
+  height: 96px;
+  object-fit: contain;
+  background: transparent;
+  filter: drop-shadow(0 8px 18px rgba(34, 211, 238, .18));
 }
 
 .brand-icon,

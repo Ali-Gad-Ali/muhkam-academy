@@ -1,4 +1,5 @@
-import { BadgeCheck, Code2, ExternalLink, ShieldCheck, XCircle } from 'lucide-react';
+import Image from 'next/image';
+import { BadgeCheck, ExternalLink, ShieldCheck, XCircle } from 'lucide-react';
 
 import type { InvoiceRecord, SiteSettings } from '@/lib/types';
 
@@ -20,11 +21,7 @@ export function VerificationView({ data }: { data: { invoice: InvoiceRecord; set
     <main className="verify-page">
       <section className="verify-card">
         <div className="brand">
-          <span className="brand-icon"><Code2 aria-hidden="true" /></span>
-          <span>
-            <strong>{settings.brand_name}</strong>
-            <small>Official verification</small>
-          </span>
+          <Image src="/muhkam-logo.png" alt={settings.brand_name} width={760} height={240} className="brand-logo-image" />
         </div>
 
         <span className={issued ? 'verify-mark success' : 'verify-mark failed'}>

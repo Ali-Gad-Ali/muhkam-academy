@@ -1,7 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { useSyncExternalStore } from 'react';
-import { CheckCircle2, Code2, MessageCircle, Printer, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, MessageCircle, Printer, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
@@ -49,11 +50,7 @@ export function InvoiceView({ token, initialData }: { token: string; initialData
       <article className="invoice-paper">
         <header>
           <div className="brand">
-            <span className="brand-icon"><Code2 aria-hidden="true" /></span>
-            <span>
-              <strong>{settings.invoice_company_name}</strong>
-              <small>فاتورة دفع إلكترونية</small>
-            </span>
+            <Image src="/muhkam-logo.png" alt={settings.invoice_company_name} width={760} height={240} className="brand-logo-image" />
           </div>
           <div className="invoice-number" dir="ltr">
             <span>INVOICE</span>

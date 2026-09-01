@@ -1,8 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BadgeCheck, BookOpenCheck, Code2, MessageCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, BookOpenCheck, MessageCircle, Sparkles } from 'lucide-react';
 
 import { defaultSettings } from '@/lib/defaults';
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
@@ -31,16 +32,17 @@ export default function HomePage() {
     <main className="public-page">
       <header className="topbar">
         <Link className="brand" href="/" aria-label={settings.brand_name}>
-          <span className="brand-icon"><Code2 aria-hidden="true" /></span>
-          <span>
-            <strong>{settings.brand_name}</strong>
-            <small>Learn. Build. Grow.</small>
-          </span>
+          <Image src="/muhkam-logo.png" alt={settings.brand_name} width={760} height={240} priority className="brand-logo-image" />
         </Link>
-        <a className="ghost-link" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={whatsappUrl === '#'} onClick={(event) => { if (whatsappUrl === '#') event.preventDefault(); }}>
-          <MessageCircle aria-hidden="true" />
-          تواصل معنا
-        </a>
+        <div className="topbar-actions">
+          <a className="ghost-link" href="https://www.muhkam.digital/" target="_blank" rel="noreferrer">
+            الموقع الرسمي
+          </a>
+          <a className="ghost-link" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={whatsappUrl === '#'} onClick={(event) => { if (whatsappUrl === '#') event.preventDefault(); }}>
+            <MessageCircle aria-hidden="true" />
+            تواصل معنا
+          </a>
+        </div>
       </header>
 
       <section className="hero-grid">

@@ -1,7 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
-import { ArrowLeft, Code2, Loader2, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Loader2, LockKeyhole, ShieldCheck } from 'lucide-react';
 
 export function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -33,11 +34,7 @@ export function AdminLogin() {
     <main className="public-page login-page">
       <section className="auth-card">
         <div className="brand auth-brand">
-          <span className="brand-icon"><Code2 aria-hidden="true" /></span>
-          <span>
-            <strong>MUHKAM</strong>
-            <small>Admin portal</small>
-          </span>
+          <Image src="/muhkam-logo.png" alt="Muhkam Academy" width={760} height={240} priority className="brand-logo-image" />
         </div>
         <span className="auth-icon"><LockKeyhole aria-hidden="true" /></span>
         <h1>تسجيل دخول الإدارة</h1>
