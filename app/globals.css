@@ -86,6 +86,187 @@
 .support-link:hover { color: white; border-color: rgba(103,232,249,.5); transform: translateY(-1px); }
 .support-link svg { width: 17px; color: #67e8f9; }
 
+.google-form-shell {
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 32px;
+  background: linear-gradient(160deg, rgba(16,24,43,.95), rgba(9,15,30,.96));
+  box-shadow: 0 30px 80px rgba(0,0,0,.34);
+  padding: clamp(22px, 4vw, 40px);
+  backdrop-filter: blur(18px);
+}
+
+.google-form-header {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid rgba(148,163,184,.12);
+}
+
+.google-header-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #a5f3fc;
+  background: rgba(34,211,238,.08);
+  border: 1px solid rgba(34,211,238,.14);
+}
+
+.google-form-title {
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1.3;
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.google-form-subtitle {
+  max-width: 42rem;
+  color: #cbd5e1;
+  line-height: 1.9;
+}
+
+.google-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(15,23,42,.7);
+  border: 1px solid rgba(148,163,184,.08);
+}
+
+.google-summary span {
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.google-summary strong {
+  color: #5eead4;
+  font-size: 1.3rem;
+}
+
+.google-form-body {
+  padding-top: 24px;
+}
+
+.google-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.google-field-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.google-field-card:last-child, .google-field-card:nth-last-child(2) {
+  grid-column: span 2;
+}
+
+.google-field-label {
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.google-field-label b {
+  color: #67e8f9;
+}
+
+.google-input {
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid rgba(148,163,184,.15);
+  background: rgba(2,6,23,.34);
+  color: white;
+  padding-inline: 16px;
+  font-size: 15px;
+}
+
+.google-input::placeholder { color: #64748b; }
+.google-input:focus-visible { border-color: rgba(103,232,249,.7); box-shadow: 0 0 0 3px rgba(34,211,238,.08); }
+
+.google-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.google-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border-radius: 14px;
+  border: 1px solid rgba(148,163,184,.15);
+  background: rgba(2,6,23,.28);
+  color: #cbd5e1;
+  cursor: pointer;
+  font-weight: 700;
+  transition: .2s ease;
+}
+
+.google-choice.selected {
+  color: white;
+  border-color: rgba(103,232,249,.6);
+  background: rgba(34,211,238,.08);
+}
+
+.google-upload {
+  display: flex;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 16px;
+  border: 1px dashed rgba(103,232,249,.34);
+  background: rgba(6,182,212,.04);
+  color: #cbd5e1;
+  cursor: pointer;
+  text-align: center;
+  transition: .2s ease;
+}
+
+.google-upload:hover, .google-upload.has-file {
+  border-color: #67e8f9;
+  background: rgba(6,182,212,.08);
+}
+
+.google-upload svg { color: #67e8f9; }
+.google-upload strong { font-size: 13px; }
+.google-upload span { font-size: 11px; color: #64748b; }
+
+.google-form-alert {
+  grid-column: 1 / -1;
+  border-radius: 14px;
+  border: 1px solid rgba(248,113,113,.25);
+  background: rgba(127,29,29,.15);
+  color: #fecaca;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.google-form-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 26px;
+}
+
+.google-form-actions .submit-button {
+  width: min(100%, 360px);
+}
+
 .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #a5f3fc; font-size: 12px; font-weight: 700; padding: 8px 12px; border: 1px solid rgba(34,211,238,.2); background: rgba(8,145,178,.08); border-radius: 999px; }
 .eyebrow span { width: 7px; height: 7px; border-radius: 999px; background: #22d3ee; box-shadow: 0 0 0 5px rgba(34,211,238,.1); }
 .gradient-text { color: transparent; background: linear-gradient(90deg, #67e8f9, #c4b5fd 70%); background-clip: text; -webkit-background-clip: text; }
@@ -119,6 +300,8 @@
   .site-shell::before { background-size: 42px 42px; }
   .support-link { padding-inline: 11px; }
   .course-card { align-items: flex-start; }
+  .google-form-grid { grid-template-columns: 1fr; }
+  .google-field-card:last-child, .google-field-card:nth-last-child(2) { grid-column: auto; }
 }
 
 .admin-shell { background: #080e20; }

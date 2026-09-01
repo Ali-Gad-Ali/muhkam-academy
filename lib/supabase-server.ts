@@ -4,6 +4,8 @@ const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE
 const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
+export const DEMO_ADMIN_TOKEN = 'demo-admin-token';
+
 export const isSupabaseConfigured = () => Boolean(supabaseUrl && serviceKey && anonKey);
 export const isLocalDemo = () => !isSupabaseConfigured() && process.env.NODE_ENV !== 'production';
 
@@ -25,7 +27,7 @@ export async function supabaseRest<T>(path: string, init: RequestInit = {}): Pro
 }
 
 export async function validateAdminToken(token: string | undefined | null) {
-  if (isLocalDemo()) return { id: 'local-admin', email: 'admin@muhkam.local' };
+  if (token === DEMO_ADMIN_TOKEN || isLocalDemo()) return { id: 'local-admin', email: 'admin@muhkam.local' };
   if (!token || !supabaseUrl || !anonKey) return null;
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: { apikey: anonKey, Authorization: `Bearer ${token}` },

@@ -6,6 +6,7 @@ export const defaultSettings: SiteSettings = {
   course_name: 'Full Stack Web Development',
   course_description: 'برنامج تدريبي عملي يأخذك من الأساسيات إلى بناء مشاريع حقيقية جاهزة لسوق العمل.',
   course_price: 2500,
+  course_discount_amount: 0,
   currency: 'EGP',
   registration_open: true,
   whatsapp_number: '201000000000',
@@ -14,6 +15,13 @@ export const defaultSettings: SiteSettings = {
   invoice_tax_number: '',
   verification_message: 'هذه الفاتورة صادرة إلكترونيًا من Muhkam Academy.',
   verification_link: '',
+  guide_title: 'هداية بعد إكمال الكورس',
+  guide_intro: 'بمجرد إنهاء الكورس، ستتلقى هذه المزايا القيمة لتبدأ رحلتك المهنية بثقة.',
+  guide_items: [
+    { id: 'prompt-master', title: 'حساب Prompt Master', description: '1- اكونت برومبت ماستر\n2- باكدج عباره عن cv + لينكدان + كفر ليتر\n3- اشتراك ب 1000 جنية علي موقع برومبت ماستر\n4- اكونت جيمناي مدفوع مجاني مع الكورس' },
+    { id: 'cv', title: 'بريدك المهني', description: 'تجهيز سيرة ذاتية احترافية، ملف LinkedIn، وكفر ليتير جاهز للتقديم.' },
+    { id: 'gpt', title: 'مزايا إضافية', description: 'دعم فني لأسئلة المشروع، جلسات متابعة، وتوجيه في بناء مسارك المهني.' },
+  ],
   logo_url: null,
 };
 

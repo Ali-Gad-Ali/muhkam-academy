@@ -1,87 +1,716 @@
-'use client';
+﻿'use client';
 /* oxlint-disable jsx-a11y/label-has-associated-control */
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowUp, BadgeCheck, Banknote, Bell, Check, ClipboardList, Code2, Eye, FileCheck2, FileText, Gauge, GripVertical, Loader2, LogOut, MessageCircle, Plus, Save, Search, Settings, Trash2, Users } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  BadgeCheck,
+  Banknote,
+  Bell,
+  Check,
+  ClipboardList,
+  Code2,
+  Eye,
+  FileCheck2,
+  FileText,
+  Gauge,
+  GripVertical,
+  Loader2,
+  LogOut,
+  MessageCircle,
+  Plus,
+  Save,
+  Search,
+  Settings,
+  Trash2,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { defaultQuestions, defaultSettings } from '@/lib/defaults';
-import type { ApplicationRecord, DashboardPayload, FormQuestion, InvoiceRecord, QuestionType, SiteSettings } from '@/lib/types';
+import type {
+  ApplicationRecord,
+  DashboardPayload,
+  FormQuestion,
+  InvoiceRecord,
+  QuestionType,
+  SiteSettings,
+} from '@/lib/types';
 
 type AdminTab = 'overview' | 'applications' | 'questions' | 'invoices' | 'settings';
-const questionLabels: Record<QuestionType, string> = { short_text: 'نص قصير', long_text: 'نص طويل', email: 'بريد إلكتروني', phone: 'رقم هاتف', single_choice: 'اختيار واحد', yes_no: 'نعم / لا', file: 'رفع ملف' };
+const questionLabels: Record<QuestionType, string> = {
+  short_text: 'نص قصير',
+  long_text: 'نص طويل',
+  email: 'بريد إلكتروني',
+  phone: 'رقم هاتف',
+  single_choice: 'اختيار واحد',
+  yes_no: 'نعم / لا',
+  file: 'رفع ملف',
+};
 
 export function AdminDashboard() {
   const [tab, setTab] = useState<AdminTab>('overview');
   const [data, setData] = useState<DashboardPayload>({ settings: defaultSettings, questions: defaultQuestions, applications: [], invoices: [] });
-  const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [notice, setNotice] = useState(''); const [search, setSearch] = useState(''); const [paymentFilter, setPaymentFilter] = useState('all'); const [selected, setSelected] = useState<ApplicationRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [search, setSearch] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [selected, setSelected] = useState<ApplicationRecord | null>(null);
 
-  useEffect(() => { void fetch('/api/admin/data').then(async (response) => { if (response.status === 401) { window.location.href = '/admin/login'; return null; } return response.json() as Promise<DashboardPayload>; }).then((payload) => payload?.settings && setData(payload)).catch(() => undefined).finally(() => setLoading(false)); }, []);
-  const filtered = useMemo(() => data.applications.filter((application) => { const text = `${application.applicant_name} ${application.phone} ${application.email}`.toLowerCase(); return text.includes(search.toLowerCase()) && (paymentFilter === 'all' || application.payment_status === paymentFilter); }), [data.applications, search, paymentFilter]);
+  useEffect(() => {
+    void fetch('/api/admin/data')
+      .then(async (response) => {
+        if (response.status === 401) {
+          window.location.href = '/admin/login';
+          return null;
+        }
+        return response.json() as Promise<DashboardPayload>;
+      })
+      .then((payload) => payload?.settings && setData(payload))
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = useMemo(
+    () =>
+      data.applications.filter((application) => {
+        const text = `${application.applicant_name} ${application.phone} ${application.email}`.toLowerCase();
+        return text.includes(search.toLowerCase()) && (paymentFilter === 'all' || application.payment_status === paymentFilter);
+      }),
+    [data.applications, search, paymentFilter],
+  );
   const paid = data.applications.filter((item) => item.payment_status === 'paid').length;
   const pending = data.applications.filter((item) => item.payment_status === 'pending').length;
   const revenue = data.invoices.filter((item) => item.status === 'issued').reduce((sum, item) => sum + Number(item.amount), 0);
 
-  function flash(message: string) { setNotice(message); window.setTimeout(() => setNotice(''), 2600); }
-  async function logout() { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/admin/login'; }
+  function flash(message: string) {
+    setNotice(message);
+    window.setTimeout(() => setNotice(''), 2600);
+  }
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
+  }
 
   async function saveQuestions() {
-    setSaving(true); const response = await fetch('/api/admin/questions', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data.questions) }); setSaving(false);
-    if (response.ok) flash('تم حفظ الأسئلة وترتيبها.'); else flash('تعذر حفظ الأسئلة.');
+    setSaving(true);
+    const response = await fetch('/api/admin/questions', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data.questions),
+    });
+    setSaving(false);
+    if (response.ok) flash('تم حفظ الأسئلة وترتيبها.');
+    else flash('تعذر حفظ الأسئلة.');
   }
+
   async function addQuestion() {
-    const draft: FormQuestion = { id: crypto.randomUUID(), system_key: null, label: 'سؤال جديد', type: 'short_text', required: false, placeholder: '', options: [], position: data.questions.length + 1, active: true, condition: null };
-    const response = await fetch('/api/admin/questions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) }); const saved = response.ok ? await response.json() as FormQuestion : draft;
-    setData((current) => ({ ...current, questions: [...current.questions, saved] })); flash('تمت إضافة سؤال جديد.');
+    const draft: FormQuestion = {
+      id: crypto.randomUUID(),
+      system_key: null,
+      label: 'سؤال جديد',
+      type: 'short_text',
+      required: false,
+      placeholder: '',
+      options: [],
+      position: data.questions.length + 1,
+      active: true,
+      condition: null,
+    };
+    const response = await fetch('/api/admin/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(draft),
+    });
+    const saved = response.ok ? ((await response.json()) as FormQuestion) : draft;
+    setData((current) => ({ ...current, questions: [...current.questions, saved] }));
+    flash('تمت إضافة سؤال جديد.');
   }
+
   async function deleteQuestion(id: string) {
     if (!window.confirm('سيتم حذف السؤال وإلغاء أي شروط تعتمد عليه. هل تريد المتابعة؟')) return;
     await fetch(`/api/admin/questions?id=${id}`, { method: 'DELETE' });
-    setData((current) => ({ ...current, questions: current.questions.filter((question) => question.id !== id).map((question, index) => ({ ...question, position: index + 1, condition: question.condition?.questionId === id ? null : question.condition })) })); flash('تم حذف السؤال.');
-  }
-  function moveQuestion(index: number, direction: -1 | 1) {
-    setData((current) => { const questions = [...current.questions]; const target = index + direction; if (target < 0 || target >= questions.length) return current; [questions[index], questions[target]] = [questions[target], questions[index]]; return { ...current, questions: questions.map((q, i) => ({ ...q, position: i + 1 })) }; });
-  }
-  async function saveSettings() {
-    setSaving(true); const response = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data.settings) }); setSaving(false); flash(response.ok ? 'تم حفظ الإعدادات.' : 'تعذر حفظ الإعدادات.');
-  }
-  async function updateApplication(application: ApplicationRecord, changes: Partial<ApplicationRecord>) {
-    const next = { ...application, ...changes }; const response = await fetch('/api/admin/applications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: next.id, status: next.status, payment_status: next.payment_status }) });
-    if (response.ok) { setData((current) => ({ ...current, applications: current.applications.map((item) => item.id === next.id ? next : item) })); setSelected(next); flash('تم تحديث حالة الطلب.'); }
-  }
-  async function createInvoice(application: ApplicationRecord) {
-    const response = await fetch('/api/admin/invoices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ application_id: application.id, recipient_name: application.applicant_name || 'متقدم الكورس', phone: application.phone, amount: data.settings.course_price, payment_method: application.answers.find((a) => a.questionId === data.questions.find((q) => q.system_key === 'payment_method')?.id)?.value || 'تحويل' }) });
-    const invoice = await response.json() as InvoiceRecord & { error?: string }; if (!response.ok) { flash(invoice.error || 'تعذر إنشاء الفاتورة.'); return; }
-    setData((current) => ({ ...current, invoices: [invoice, ...current.invoices] })); flash('تم إنشاء الفاتورة بنجاح.'); setTab('invoices');
+    setData((current) => ({
+      ...current,
+      questions: current.questions
+        .filter((question) => question.id !== id)
+        .map((question, index) => ({ ...question, position: index + 1, condition: question.condition?.questionId === id ? null : question.condition })),
+    }));
+    flash('تم حذف السؤال.');
   }
 
-  if (loading) return <main className="admin-shell grid min-h-screen place-items-center"><Loader2 className="size-8 animate-spin text-cyan-300" /></main>;
-  return <main className="admin-shell min-h-screen text-slate-100">
-    {notice && <div className="admin-toast"><Check /> {notice}</div>}
-    <aside className="admin-sidebar">
-      <div className="flex items-center gap-3 px-2"><span className="brand-mark"><Code2 /></span><div><strong className="text-sm text-white">MUHKAM</strong><span className="block text-[9px] tracking-[.18em] text-cyan-300/60">ADMIN</span></div></div>
-      <nav className="mt-9 space-y-1">{([['overview','نظرة عامة',Gauge],['applications','طلبات التقديم',Users],['questions','إدارة الأسئلة',ClipboardList],['invoices','الفواتير',FileText],['settings','الإعدادات',Settings]] as const).map(([id,label,Icon]) => <button key={id} className={`admin-nav ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}><Icon /> <span>{label}</span>{id === 'applications' && <b>{data.applications.length}</b>}</button>)}</nav>
-      <div className="mt-auto"><Link href="/apply" className="admin-nav"><Eye /> عرض صفحة التقديم</Link><button className="admin-nav mt-1 text-red-200/80" onClick={logout}><LogOut /> تسجيل الخروج</button></div>
-    </aside>
-    <section className="admin-content">
-      <header className="admin-topbar"><div><p className="text-xs text-cyan-300/75">لوحة تحكم Muhkam Academy</p><h1 className="mt-1 text-2xl font-black text-white">{tab === 'overview' ? 'أهلًا بك 👋' : ({ applications: 'طلبات التقديم', questions: 'إدارة أسئلة الفورم', invoices: 'الفواتير', settings: 'إعدادات الموقع' } as Record<string,string>)[tab]}</h1></div><div className="flex items-center gap-2"><button className="icon-button"><Bell /></button><span className="admin-avatar">MA</span></div></header>
-      {data.demo && <div className="demo-banner">أنت الآن في وضع المعاينة. أضف مفاتيح Supabase لتصبح كل التغييرات محفوظة فعليًا.</div>}
-      {tab === 'overview' && <Overview applications={data.applications} paid={paid} pending={pending} revenue={revenue} setTab={setTab} />}
-      {tab === 'applications' && <Applications applications={filtered} search={search} setSearch={setSearch} paymentFilter={paymentFilter} setPaymentFilter={setPaymentFilter} selected={selected} setSelected={setSelected} updateApplication={updateApplication} createInvoice={createInvoice} invoices={data.invoices} />}
-      {tab === 'questions' && <Questions questions={data.questions} setData={setData} addQuestion={addQuestion} deleteQuestion={deleteQuestion} moveQuestion={moveQuestion} saveQuestions={saveQuestions} saving={saving} />}
-      {tab === 'invoices' && <Invoices invoices={data.invoices} settings={data.settings} />}
-      {tab === 'settings' && <SettingsPanel settings={data.settings} setData={setData} save={saveSettings} saving={saving} />}
-    </section>
-  </main>;
+  function moveQuestion(index: number, direction: -1 | 1) {
+    setData((current) => {
+      const questions = [...current.questions];
+      const target = index + direction;
+      if (target < 0 || target >= questions.length) return current;
+      [questions[index], questions[target]] = [questions[target], questions[index]];
+      return {
+        ...current,
+        questions: questions.map((q, i) => ({ ...q, position: i + 1 })),
+      };
+    });
+  }
+
+  async function saveSettings() {
+    setSaving(true);
+    const response = await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data.settings),
+    });
+    setSaving(false);
+    flash(response.ok ? 'تم حفظ الإعدادات.' : 'تعذر حفظ الإعدادات.');
+  }
+
+  async function updateApplication(application: ApplicationRecord, changes: Partial<ApplicationRecord>) {
+    const next = { ...application, ...changes };
+    const response = await fetch('/api/admin/applications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: next.id, status: next.status, payment_status: next.payment_status }),
+    });
+    if (response.ok) {
+      setData((current) => ({
+        ...current,
+        applications: current.applications.map((item) => (item.id === next.id ? next : item)),
+      }));
+      setSelected(next);
+      flash('تم تحديث حالة الطلب.');
+    }
+  }
+
+  async function createInvoice(application: ApplicationRecord) {
+    const effectivePrice = Math.max(0, Number(data.settings.course_price) - Number(data.settings.course_discount_amount || 0));
+    const response = await fetch('/api/admin/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        application_id: application.id,
+        recipient_name: application.applicant_name || 'متقدم الكورس',
+        phone: application.phone,
+        amount: effectivePrice,
+        payment_method:
+          application.answers.find((a) => a.questionId === data.questions.find((q) => q.system_key === 'payment_method')?.id)?.value || 'تحويل',
+      }),
+    });
+    const invoice = (await response.json()) as InvoiceRecord & { error?: string };
+    if (!response.ok) {
+      flash(invoice.error || 'تعذر إنشاء الفاتورة.');
+      return;
+    }
+    setData((current) => ({ ...current, invoices: [invoice, ...current.invoices] }));
+    flash('تم إنشاء الفاتورة بنجاح.');
+    setTab('invoices');
+  }
+
+  if (loading) {
+    return (
+      <main className="admin-shell grid min-h-screen place-items-center">
+        <Loader2 className="size-8 animate-spin text-cyan-300" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="admin-shell min-h-screen text-slate-100">
+      {notice && (
+        <div className="admin-toast">
+          <Check /> {notice}
+        </div>
+      )}
+
+      <aside className="admin-sidebar">
+        <div className="flex items-center gap-3 px-2">
+          <span className="brand-mark"><Code2 /></span>
+          <div>
+            <strong className="text-sm text-white">MUHKAM</strong>
+            <span className="block text-[9px] tracking-[.18em] text-cyan-300/60">ADMIN</span>
+          </div>
+        </div>
+
+        <nav className="mt-9 space-y-1">
+          {([
+            ['overview', 'نظرة عامة', Gauge],
+            ['applications', 'طلبات التقديم', Users],
+            ['questions', 'إدارة الأسئلة', ClipboardList],
+            ['invoices', 'الفواتير', FileText],
+            ['settings', 'الإعدادات', Settings],
+          ] as const).map(([id, label, Icon]) => (
+            <button key={id} className={`admin-nav ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}>
+              <Icon />
+              <span>{label}</span>
+              {id === 'applications' && <b>{data.applications.length}</b>}
+            </button>
+          ))}
+        </nav>
+
+        <div className="mt-auto">
+          <Link href="/apply" className="admin-nav"><Eye /> عرض صفحة التقديم</Link>
+          <button className="admin-nav mt-1 text-red-200/80" onClick={logout}><LogOut /> تسجيل الخروج</button>
+        </div>
+      </aside>
+
+      <section className="admin-content">
+        <header className="admin-topbar">
+          <div>
+            <p className="text-xs text-cyan-300/75">لوحة تحكم Muhkam Academy</p>
+            <h1 className="mt-1 text-2xl font-black text-white">
+              {tab === 'overview' ? 'أهلًا بك 👋' : ({ applications: 'طلبات التقديم', questions: 'إدارة أسئلة الفورم', invoices: 'الفواتير', settings: 'إعدادات الموقع' } as Record<string, string>)[tab]}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="icon-button"><Bell /></button>
+            <span className="admin-avatar">MA</span>
+          </div>
+        </header>
+
+        {data.demo && <div className="demo-banner">أنت الآن في وضع المعاينة. أضف مفاتيح Supabase لتصبح كل التغييرات محفوظة فعليًا.</div>}
+
+        {tab === 'overview' && <Overview applications={data.applications} paid={paid} pending={pending} revenue={revenue} setTab={setTab} />}
+        {tab === 'applications' && (
+          <Applications
+            applications={filtered}
+            search={search}
+            setSearch={setSearch}
+            paymentFilter={paymentFilter}
+            setPaymentFilter={setPaymentFilter}
+            selected={selected}
+            setSelected={setSelected}
+            updateApplication={updateApplication}
+            createInvoice={createInvoice}
+            invoices={data.invoices}
+          />
+        )}
+        {tab === 'questions' && <Questions questions={data.questions} setData={setData} addQuestion={addQuestion} deleteQuestion={deleteQuestion} moveQuestion={moveQuestion} saveQuestions={saveQuestions} saving={saving} />}
+        {tab === 'invoices' && <Invoices invoices={data.invoices} settings={data.settings} />}
+        {tab === 'settings' && <SettingsPanel settings={data.settings} setData={setData} save={saveSettings} saving={saving} />}
+      </section>
+    </main>
+  );
 }
 
-function Stat({ title, value, detail, Icon, tone }: { title: string; value: string | number; detail: string; Icon: typeof Users; tone: string }) { return <article className="admin-card stat-card"><span className={`stat-icon ${tone}`}><Icon /></span><div><p className="text-xs text-slate-400">{title}</p><strong className="mt-2 block text-3xl text-white">{value}</strong><span className="mt-1 block text-xs text-slate-500">{detail}</span></div></article>; }
-function Overview({ applications, paid, pending, revenue, setTab }: { applications: ApplicationRecord[]; paid: number; pending: number; revenue: number; setTab: (tab: AdminTab) => void }) { return <div className="space-y-6"><div className="stats-grid"><Stat title="إجمالي المتقدمين" value={applications.length} detail="كل طلبات التسجيل" Icon={Users} tone="cyan" /><Stat title="بانتظار المراجعة" value={pending} detail="يحتاجون مراجعة الدفع" Icon={FileCheck2} tone="violet" /><Stat title="مدفوع" value={paid} detail="تم اعتماد الدفع" Icon={BadgeCheck} tone="green" /><Stat title="إجمالي الفواتير" value={`${revenue.toLocaleString('ar-EG')} ج.م`} detail="قيمة الفواتير الصادرة" Icon={Banknote} tone="amber" /></div><article className="admin-card"><div className="flex items-center justify-between"><div><h2 className="font-bold text-white">أحدث الطلبات</h2><p className="mt-1 text-xs text-slate-500">آخر المتقدمين للكورس</p></div><Button variant="ghost" onClick={() => setTab('applications')}>عرض الكل</Button></div><div className="mt-4 overflow-hidden rounded-xl border border-white/6"><Table><TableHeader><TableRow><TableHead>المتقدم</TableHead><TableHead>الهاتف</TableHead><TableHead>الدفع</TableHead><TableHead>وقت التقديم</TableHead></TableRow></TableHeader><TableBody>{applications.slice(0,5).map((app) => <TableRow key={app.id}><TableCell><strong>{app.applicant_name || 'بدون اسم'}</strong><span className="block text-xs text-slate-500">{app.email}</span></TableCell><TableCell dir="ltr" className="text-right">{app.phone}</TableCell><TableCell><StatusBadge value={app.payment_status} /></TableCell><TableCell>{new Date(app.created_at).toLocaleDateString('ar-EG')}</TableCell></TableRow>)}</TableBody></Table></div></article></div>; }
-function StatusBadge({ value }: { value: string }) { const labels: Record<string,string> = { pending: 'قيد المراجعة', paid: 'مدفوع', rejected: 'مرفوض', new: 'جديد', reviewing: 'قيد المتابعة', accepted: 'مقبول' }; return <span className={`status-badge status-${value}`}>{labels[value] || value}</span>; }
-function Applications({ applications, search, setSearch, paymentFilter, setPaymentFilter, selected, setSelected, updateApplication, createInvoice, invoices }: { applications: ApplicationRecord[]; search: string; setSearch: (v:string)=>void; paymentFilter:string; setPaymentFilter:(v:string)=>void; selected:ApplicationRecord|null; setSelected:(v:ApplicationRecord|null)=>void; updateApplication:(a:ApplicationRecord,c:Partial<ApplicationRecord>)=>void; createInvoice:(a:ApplicationRecord)=>void; invoices:InvoiceRecord[] }) { return <div className="grid gap-6 xl:grid-cols-[1fr_360px]"><article className="admin-card min-w-0"><div className="mb-5 flex flex-wrap gap-3"><div className="search-box"><Search /><Input aria-label="البحث في الطلبات" value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="ابحث بالاسم أو الهاتف أو البريد" /></div><select aria-label="تصفية حالة الدفع" className="admin-select" value={paymentFilter} onChange={(e)=>setPaymentFilter(e.target.value)}><option value="all">كل حالات الدفع</option><option value="pending">قيد المراجعة</option><option value="paid">مدفوع</option><option value="rejected">مرفوض</option></select></div><Table><TableHeader><TableRow><TableHead>المتقدم</TableHead><TableHead>التواصل</TableHead><TableHead>حالة الطلب</TableHead><TableHead>الدفع</TableHead><TableHead></TableHead></TableRow></TableHeader><TableBody>{applications.map((app)=><TableRow key={app.id} className="cursor-pointer" onClick={()=>setSelected(app)}><TableCell><strong>{app.applicant_name || 'بدون اسم'}</strong><span className="block text-xs text-slate-500">{new Date(app.created_at).toLocaleDateString('ar-EG')}</span></TableCell><TableCell><span dir="ltr">{app.phone}</span><span className="block text-xs text-slate-500">{app.email}</span></TableCell><TableCell><StatusBadge value={app.status}/></TableCell><TableCell><StatusBadge value={app.payment_status}/></TableCell><TableCell><Button aria-label="عرض الطلب" size="icon-sm" variant="ghost"><Eye/></Button></TableCell></TableRow>)}</TableBody></Table>{!applications.length && <p className="py-14 text-center text-sm text-slate-500">لا توجد طلبات مطابقة.</p>}</article><aside className="admin-card h-fit xl:sticky xl:top-6">{selected ? <><div className="flex items-start justify-between"><div><p className="text-xs text-cyan-300">تفاصيل الطلب</p><h2 className="mt-1 text-xl font-bold text-white">{selected.applicant_name || 'متقدم بدون اسم'}</h2></div><StatusBadge value={selected.payment_status}/></div><div className="mt-5 space-y-3">{selected.answers.map((answer)=><div key={answer.questionId} className="answer-row"><span>{answer.label}</span><strong>{answer.value || '—'}</strong></div>)}</div>{selected.payment_proof_url && <a className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 text-sm text-cyan-200" href={selected.payment_proof_url} target="_blank" rel="noreferrer"><Eye/> عرض إثبات الدفع</a>}<div className="mt-5 grid grid-cols-2 gap-2"><Button variant="outline" className="border-white/10 bg-white/5" render={<a aria-label="فتح واتساب المتقدم" href={`https://wa.me/${selected.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer">واتساب</a>}><MessageCircle/> واتساب</Button>{selected.payment_status !== 'paid' ? <Button className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300" onClick={()=>updateApplication(selected,{payment_status:'paid',status:'accepted'})}><Check/> اعتماد الدفع</Button> : <Button className="submit-button" disabled={invoices.some((i)=>i.application_id===selected.id&&i.status==='issued')} onClick={()=>createInvoice(selected)}><FileText/> إنشاء فاتورة</Button>}</div></> : <div className="grid min-h-72 place-items-center text-center text-sm text-slate-500"><div><Eye className="mx-auto mb-3"/><p>اختر طلبًا لعرض كل بياناته<br/>وتحديث حالة الدفع.</p></div></div>}</aside></div>; }
-function Questions({ questions, setData, addQuestion, deleteQuestion, moveQuestion, saveQuestions, saving }: { questions:FormQuestion[]; setData:React.Dispatch<React.SetStateAction<DashboardPayload>>; addQuestion:()=>void; deleteQuestion:(id:string)=>void; moveQuestion:(i:number,d:-1|1)=>void; saveQuestions:()=>void; saving:boolean }) { function update(id:string,changes:Partial<FormQuestion>){setData((current)=>({...current,questions:current.questions.map((q)=>q.id===id?{...q,...changes}:q)}));} return <div className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><p className="max-w-xl text-sm leading-6 text-slate-400">يمكنك تعديل كل سؤال أو حذفه أو تغيير ترتيبه. الإجابات القديمة ستظل محفوظة بعنوان السؤال وقت التقديم.</p><div className="flex gap-2"><Button variant="outline" className="border-white/10 bg-white/5" onClick={addQuestion}><Plus/> إضافة سؤال</Button><Button className="submit-button" onClick={saveQuestions} disabled={saving}>{saving?<Loader2 className="animate-spin"/>:<Save/>} حفظ التغييرات</Button></div></div>{questions.map((question,index)=><article className="admin-card question-row" key={question.id}><div className="drag-handle"><GripVertical/></div><div className="grid flex-1 gap-4 lg:grid-cols-[1.4fr_.7fr_.7fr]"><label className="admin-field"><span>نص السؤال</span><Input value={question.label} onChange={(e)=>update(question.id,{label:e.target.value})}/></label><label className="admin-field"><span>نوع الإجابة</span><select value={question.type} onChange={(e)=>update(question.id,{type:e.target.value as QuestionType})}>{Object.entries(questionLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label className="admin-field"><span>الحالة</span><select value={question.required?'required':'optional'} onChange={(e)=>update(question.id,{required:e.target.value==='required'})}><option value="required">مطلوب</option><option value="optional">اختياري</option></select></label>{question.type==='single_choice'&&<label className="admin-field lg:col-span-2"><span>الاختيارات — افصل بينها بفاصلة</span><Input value={question.options.join('، ')} onChange={(e)=>update(question.id,{options:e.target.value.split(/[،,]/).map(v=>v.trim()).filter(Boolean)})}/></label>}<label className="admin-field"><span>إظهار بشرط</span><select value={question.condition?.questionId||''} onChange={(e)=>update(question.id,{condition:e.target.value?{questionId:e.target.value,equals:questions.find(q=>q.id===e.target.value)?.options[0]||'نعم'}:null})}><option value="">دائمًا</option>{questions.filter((q)=>q.id!==question.id&&(q.type==='single_choice'||q.type==='yes_no')).map((q)=><option key={q.id} value={q.id}>{q.label}</option>)}</select></label>{question.condition&&<label className="admin-field"><span>عندما تكون الإجابة</span><Input value={question.condition.equals} onChange={(e)=>update(question.id,{condition:{...question.condition!,equals:e.target.value}})}/></label>}</div><div className="flex gap-1"><Button size="icon-sm" variant="ghost" disabled={index===0} onClick={()=>moveQuestion(index,-1)}><ArrowUp/></Button><Button size="icon-sm" variant="ghost" disabled={index===questions.length-1} onClick={()=>moveQuestion(index,1)}><ArrowDown/></Button><Button size="icon-sm" variant="destructive" onClick={()=>deleteQuestion(question.id)}><Trash2/></Button></div></article>)}</div>; }
-function Invoices({ invoices, settings }: { invoices:InvoiceRecord[]; settings:SiteSettings }) { const origin=typeof window==='undefined'?'':window.location.origin; return <article className="admin-card"><div className="mb-5"><h2 className="font-bold text-white">الفواتير الصادرة</h2><p className="mt-1 text-xs text-slate-500">روابط قابلة للطباعة والمشاركة والتحقق عبر QR</p></div>{invoices.length?<Table><TableHeader><TableRow><TableHead>رقم الفاتورة</TableHead><TableHead>المستلم</TableHead><TableHead>القيمة</TableHead><TableHead>التاريخ</TableHead><TableHead>إجراءات</TableHead></TableRow></TableHeader><TableBody>{invoices.map((invoice)=>{const url=`${origin}/invoice/${invoice.public_token}`; const message=`مرحبًا ${invoice.recipient_name}، هذه فاتورتك من ${settings.brand_name}: ${url}`; return <TableRow key={invoice.id}><TableCell dir="ltr" className="text-right font-mono text-cyan-200">{invoice.invoice_number}</TableCell><TableCell>{invoice.recipient_name}<span dir="ltr" className="block text-xs text-slate-500">{invoice.phone}</span></TableCell><TableCell>{Number(invoice.amount).toLocaleString('ar-EG')} ج.م</TableCell><TableCell>{new Date(invoice.issued_at).toLocaleDateString('ar-EG')}</TableCell><TableCell><div className="flex gap-1"><Button aria-label="عرض الفاتورة" size="icon-sm" variant="ghost" render={<a aria-label="عرض الفاتورة" href={`/invoice/${invoice.public_token}`} target="_blank">عرض</a>}><Eye/></Button><Button aria-label="مشاركة الفاتورة عبر واتساب" size="icon-sm" variant="ghost" render={<a aria-label="مشاركة الفاتورة عبر واتساب" href={`https://wa.me/${invoice.phone.replace(/\D/g,'')}?text=${encodeURIComponent(message)}`} target="_blank">واتساب</a>}><MessageCircle/></Button></div></TableCell></TableRow>})}</TableBody></Table>:<div className="grid min-h-72 place-items-center text-center text-slate-500"><div><FileText className="mx-auto mb-3 size-9"/><p>لا توجد فواتير بعد.</p><span className="mt-1 block text-xs">اعتمد دفع أحد الطلبات ثم أنشئ فاتورته.</span></div></div>}</article>; }
-function SettingsPanel({ settings, setData, save, saving }: { settings:SiteSettings; setData:React.Dispatch<React.SetStateAction<DashboardPayload>>; save:()=>void; saving:boolean }) { function update(changes:Partial<SiteSettings>){setData((current)=>({...current,settings:{...current.settings,...changes}}));} return <div className="grid gap-6 xl:grid-cols-2"><article className="admin-card space-y-5"><div><h2 className="font-bold text-white">بيانات الكورس والموقع</h2><p className="mt-1 text-xs text-slate-500">تظهر مباشرة في صفحة التقديم.</p></div><label className="admin-field"><span>اسم العلامة</span><Input value={settings.brand_name} onChange={(e)=>update({brand_name:e.target.value})}/></label><label className="admin-field"><span>اسم الكورس</span><Input value={settings.course_name} onChange={(e)=>update({course_name:e.target.value})}/></label><label className="admin-field"><span>وصف الكورس</span><textarea value={settings.course_description} onChange={(e)=>update({course_description:e.target.value})}/></label><div className="grid grid-cols-2 gap-3"><label className="admin-field"><span>السعر بالجنيه</span><Input type="number" value={settings.course_price} onChange={(e)=>update({course_price:Number(e.target.value)})}/></label><label className="admin-field"><span>حالة التسجيل</span><select value={settings.registration_open?'open':'closed'} onChange={(e)=>update({registration_open:e.target.value==='open'})}><option value="open">مفتوح</option><option value="closed">مغلق</option></select></label></div><label className="admin-field"><span>رقم واتساب الإدارة</span><Input dir="ltr" className="text-left" value={settings.whatsapp_number} onChange={(e)=>update({whatsapp_number:e.target.value})}/></label></article><article className="admin-card space-y-5"><div><h2 className="font-bold text-white">الفاتورة وصفحة التحقق</h2><p className="mt-1 text-xs text-slate-500">يظهر QR الفريد تلقائيًا في كل فاتورة.</p></div><label className="admin-field"><span>اسم الشركة في الفاتورة</span><Input value={settings.invoice_company_name} onChange={(e)=>update({invoice_company_name:e.target.value})}/></label><label className="admin-field"><span>العنوان</span><Input value={settings.invoice_address} onChange={(e)=>update({invoice_address:e.target.value})}/></label><label className="admin-field"><span>الرقم الضريبي — اختياري</span><Input value={settings.invoice_tax_number} onChange={(e)=>update({invoice_tax_number:e.target.value})}/></label><label className="admin-field"><span>رسالة التحقق</span><textarea value={settings.verification_message} onChange={(e)=>update({verification_message:e.target.value})}/></label><label className="admin-field"><span>رابط إضافي — اختياري</span><Input dir="ltr" className="text-left" value={settings.verification_link} onChange={(e)=>update({verification_link:e.target.value})}/></label></article><div className="xl:col-span-2 flex justify-end"><Button className="submit-button h-11 px-6" onClick={save} disabled={saving}>{saving?<Loader2 className="animate-spin"/>:<Save/>} حفظ الإعدادات</Button></div></div>; }
+function Stat({ title, value, detail, Icon, tone }: { title: string; value: string | number; detail: string; Icon: typeof Users; tone: string }) {
+  return (
+    <article className="admin-card stat-card">
+      <span className={`stat-icon ${tone}`}><Icon /></span>
+      <div>
+        <p className="text-xs text-slate-400">{title}</p>
+        <strong className="mt-2 block text-3xl text-white">{value}</strong>
+        <span className="mt-1 block text-xs text-slate-500">{detail}</span>
+      </div>
+    </article>
+  );
+}
+
+function Overview({ applications, paid, pending, revenue, setTab }: { applications: ApplicationRecord[]; paid: number; pending: number; revenue: number; setTab: (tab: AdminTab) => void }) {
+  return (
+    <div className="space-y-6">
+      <div className="stats-grid">
+        <Stat title="إجمالي المتقدمين" value={applications.length} detail="كل طلبات التسجيل" Icon={Users} tone="cyan" />
+        <Stat title="بانتظار المراجعة" value={pending} detail="يحتاجون مراجعة الدفع" Icon={FileCheck2} tone="violet" />
+        <Stat title="مدفوع" value={paid} detail="تم اعتماد الدفع" Icon={BadgeCheck} tone="green" />
+        <Stat title="إجمالي الفواتير" value={`${revenue.toLocaleString('ar-EG')} ج.م`} detail="قيمة الفواتير الصادرة" Icon={Banknote} tone="amber" />
+      </div>
+
+      <article className="admin-card">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-white">أحدث الطلبات</h2>
+            <p className="mt-1 text-xs text-slate-500">آخر المتقدمين للكورس</p>
+          </div>
+          <Button variant="ghost" onClick={() => setTab('applications')}>عرض الكل</Button>
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-xl border border-white/6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>المتقدم</TableHead>
+                <TableHead>الهاتف</TableHead>
+                <TableHead>الدفع</TableHead>
+                <TableHead>وقت التقديم</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {applications.slice(0, 5).map((app) => (
+                <TableRow key={app.id}>
+                  <TableCell>
+                    <strong>{app.applicant_name || 'بدون اسم'}</strong>
+                    <span className="block text-xs text-slate-500">{app.email}</span>
+                  </TableCell>
+                  <TableCell dir="ltr" className="text-right">{app.phone}</TableCell>
+                  <TableCell><StatusBadge value={app.payment_status} /></TableCell>
+                  <TableCell>{new Date(app.created_at).toLocaleDateString('ar-EG')}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function StatusBadge({ value }: { value: string }) {
+  const labels: Record<string, string> = {
+    pending: 'قيد المراجعة',
+    paid: 'مدفوع',
+    rejected: 'مرفوض',
+    new: 'جديد',
+    reviewing: 'قيد المتابعة',
+    accepted: 'مقبول',
+  };
+  return <span className={`status-badge status-${value}`}>{labels[value] || value}</span>;
+}
+
+function Applications({
+  applications,
+  search,
+  setSearch,
+  paymentFilter,
+  setPaymentFilter,
+  selected,
+  setSelected,
+  updateApplication,
+  createInvoice,
+  invoices,
+}: {
+  applications: ApplicationRecord[];
+  search: string;
+  setSearch: (v: string) => void;
+  paymentFilter: string;
+  setPaymentFilter: (v: string) => void;
+  selected: ApplicationRecord | null;
+  setSelected: (v: ApplicationRecord | null) => void;
+  updateApplication: (a: ApplicationRecord, c: Partial<ApplicationRecord>) => void;
+  createInvoice: (a: ApplicationRecord) => void;
+  invoices: InvoiceRecord[];
+}) {
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <article className="admin-card min-w-0">
+        <div className="mb-5 flex flex-wrap gap-3">
+          <div className="search-box">
+            <Search />
+            <Input aria-label="البحث في الطلبات" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث بالاسم أو الهاتف أو البريد" />
+          </div>
+          <select aria-label="تصفية حالة الدفع" className="admin-select" value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
+            <option value="all">كل حالات الدفع</option>
+            <option value="pending">قيد المراجعة</option>
+            <option value="paid">مدفوع</option>
+            <option value="rejected">مرفوض</option>
+          </select>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>المتقدم</TableHead>
+              <TableHead>التواصل</TableHead>
+              <TableHead>حالة الطلب</TableHead>
+              <TableHead>الدفع</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {applications.map((app) => (
+              <TableRow key={app.id} className="cursor-pointer" onClick={() => setSelected(app)}>
+                <TableCell>
+                  <strong>{app.applicant_name || 'بدون اسم'}</strong>
+                  <span className="block text-xs text-slate-500">{new Date(app.created_at).toLocaleDateString('ar-EG')}</span>
+                </TableCell>
+                <TableCell>
+                  <span dir="ltr">{app.phone}</span>
+                  <span className="block text-xs text-slate-500">{app.email}</span>
+                </TableCell>
+                <TableCell><StatusBadge value={app.status} /></TableCell>
+                <TableCell><StatusBadge value={app.payment_status} /></TableCell>
+                <TableCell><Button aria-label="عرض الطلب" size="icon-sm" variant="ghost"><Eye /></Button></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </article>
+
+      <aside className="admin-card min-h-[300px]">
+        {selected ? (
+          <div className="space-y-5">
+            <div>
+              <p className="text-xs text-cyan-300/70">تفاصيل الطلب</p>
+              <h3 className="mt-2 text-xl font-black text-white">{selected.applicant_name}</h3>
+            </div>
+
+            <div className="space-y-3 text-sm text-slate-300">
+              <p><strong>الهاتف:</strong> <span dir="ltr">{selected.phone}</span></p>
+              <p><strong>البريد:</strong> <span dir="ltr">{selected.email}</span></p>
+              <p><strong>حالة الطلب:</strong> <StatusBadge value={selected.status} /></p>
+              <p><strong>حالة الدفع:</strong> <StatusBadge value={selected.payment_status} /></p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="border-white/10 bg-white/5" onClick={() => updateApplication(selected, { status: 'reviewing' })}>تعيين قيد المراجعة</Button>
+              <Button variant="outline" className="border-emerald-400/20 bg-emerald-500/10 text-emerald-200" onClick={() => updateApplication(selected, { status: 'accepted', payment_status: 'paid' })}>قبول</Button>
+              <Button variant="outline" className="border-red-400/20 bg-red-500/10 text-red-200" onClick={() => updateApplication(selected, { status: 'rejected', payment_status: 'rejected' })}>رفض</Button>
+            </div>
+
+            <Button className="submit-button w-full" onClick={() => createInvoice(selected)}>إنشاء فاتورة</Button>
+            {selected.payment_proof_url && <a href={selected.payment_proof_url} target="_blank" rel="noreferrer" className="inline-block text-sm text-cyan-300">فتح إثبات الدفع</a>}
+          </div>
+        ) : (
+          <div className="grid h-full place-items-center text-center text-slate-500">
+            <div>
+              <Users className="mx-auto mb-3 size-9" />
+              <p>اختر طلبًا لعرض تفاصيله.</p>
+            </div>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+function Questions({ questions, setData, addQuestion, deleteQuestion, moveQuestion, saveQuestions, saving }: { questions: FormQuestion[]; setData: React.Dispatch<React.SetStateAction<DashboardPayload>>; addQuestion: () => void; deleteQuestion: (id: string) => void; moveQuestion: (i: number, d: -1 | 1) => void; saveQuestions: () => void; saving: boolean }) {
+  function update(id: string, changes: Partial<FormQuestion>) {
+    setData((current) => ({
+      ...current,
+      questions: current.questions.map((q) => (q.id === id ? { ...q, ...changes } : q)),
+    }));
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-xl text-sm leading-6 text-slate-400">يمكنك تعديل كل سؤال أو حذفه أو تغيير ترتيبه. الإجابات القديمة ستظل محفوظة بعنوان السؤال وقت التقديم.</p>
+        <div className="flex gap-2">
+          <Button variant="outline" className="border-white/10 bg-white/5" onClick={addQuestion}><Plus /> إضافة سؤال</Button>
+          <Button className="submit-button" onClick={saveQuestions} disabled={saving}>{saving ? <Loader2 className="animate-spin" /> : <Save />} حفظ التغييرات</Button>
+        </div>
+      </div>
+
+      {questions.map((question, index) => (
+        <article className="admin-card question-row" key={question.id}>
+          <div className="drag-handle"><GripVertical /></div>
+          <div className="grid flex-1 gap-4 lg:grid-cols-[1.4fr_.7fr_.7fr]">
+            <label className="admin-field">
+              <span>نص السؤال</span>
+              <Input value={question.label} onChange={(e) => update(question.id, { label: e.target.value })} />
+            </label>
+            <label className="admin-field">
+              <span>نوع الإجابة</span>
+              <select value={question.type} onChange={(e) => update(question.id, { type: e.target.value as QuestionType })}>
+                {Object.entries(questionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label className="admin-field">
+              <span>الحالة</span>
+              <select value={question.required ? 'required' : 'optional'} onChange={(e) => update(question.id, { required: e.target.value === 'required' })}>
+                <option value="required">مطلوب</option>
+                <option value="optional">اختياري</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" className="icon-button" onClick={() => moveQuestion(index, -1)} aria-label="نقل لأعلى"><ArrowUp /></button>
+            <button type="button" className="icon-button" onClick={() => moveQuestion(index, 1)} aria-label="نقل لأسفل"><ArrowDown /></button>
+            <button type="button" className="icon-button danger" onClick={() => deleteQuestion(question.id)} aria-label="حذف السؤال"><Trash2 /></button>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function Invoices({ invoices, settings }: { invoices: InvoiceRecord[]; settings: SiteSettings }) {
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+
+  return (
+    <article className="admin-card">
+      <div className="mb-5">
+        <h2 className="font-bold text-white">الفواتير الصادرة</h2>
+        <p className="mt-1 text-xs text-slate-500">روابط قابلة للطباعة والمشاركة والتحقق عبر QR</p>
+      </div>
+
+      {invoices.length ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>رقم الفاتورة</TableHead>
+              <TableHead>المستلم</TableHead>
+              <TableHead>القيمة</TableHead>
+              <TableHead>التاريخ</TableHead>
+              <TableHead>إجراءات</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoices.map((invoice) => {
+              const url = `${origin}/invoice/${invoice.public_token}`;
+              const message = `مرحبًا ${invoice.recipient_name}، هذه فاتورتك من ${settings.brand_name}: ${url}`;
+
+              return (
+                <TableRow key={invoice.id}>
+                  <TableCell dir="ltr" className="text-right font-mono text-cyan-200">{invoice.invoice_number}</TableCell>
+                  <TableCell>
+                    {invoice.recipient_name}
+                    <span dir="ltr" className="block text-xs text-slate-500">{invoice.phone}</span>
+                  </TableCell>
+                  <TableCell>{Number(invoice.amount).toLocaleString('ar-EG')} ج.م</TableCell>
+                  <TableCell>{new Date(invoice.issued_at).toLocaleDateString('ar-EG')}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button aria-label="عرض الفاتورة" size="icon-sm" variant="ghost" render={<a aria-label="عرض الفاتورة" href={`/invoice/${invoice.public_token}`} target="_blank">عرض</a>}><Eye /></Button>
+                      <Button aria-label="مشاركة الفاتورة عبر واتساب" size="icon-sm" variant="ghost" render={<a aria-label="مشاركة الفاتورة عبر واتساب" href={`https://wa.me/${invoice.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`} target="_blank">واتساب</a>}><MessageCircle /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      ) : (
+        <div className="grid min-h-72 place-items-center text-center text-slate-500">
+          <div>
+            <FileText className="mx-auto mb-3 size-9" />
+            <p>لا توجد فواتير بعد.</p>
+            <span className="mt-1 block text-xs">اعتمد دفع أحد الطلبات ثم أنشئ فاتورته.</span>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function SettingsPanel({ settings, setData, save, saving }: { settings: SiteSettings; setData: React.Dispatch<React.SetStateAction<DashboardPayload>>; save: () => void; saving: boolean }) {
+  function update(changes: Partial<SiteSettings>) {
+    setData((current) => ({ ...current, settings: { ...current.settings, ...changes } }));
+  }
+
+  function updateGuideItem(id: string, patch: Partial<{ title: string; description: string }>) {
+    setData((current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        guide_items: current.settings.guide_items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      },
+    }));
+  }
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-2">
+      <article className="admin-card space-y-5">
+        <div>
+          <h2 className="font-bold text-white">بيانات الكورس والموقع</h2>
+          <p className="mt-1 text-xs text-slate-500">تظهر مباشرة في صفحة التقديم.</p>
+        </div>
+
+        <label className="admin-field">
+          <span>اسم العلامة</span>
+          <Input value={settings.brand_name} onChange={(e) => update({ brand_name: e.target.value })} />
+        </label>
+
+        <label className="admin-field">
+          <span>اسم الكورس</span>
+          <Input value={settings.course_name} onChange={(e) => update({ course_name: e.target.value })} />
+        </label>
+
+        <label className="admin-field">
+          <span>وصف الكورس</span>
+          <textarea value={settings.course_description} onChange={(e) => update({ course_description: e.target.value })} />
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="admin-field">
+            <span>السعر الأساسي</span>
+            <Input type="number" value={settings.course_price} onChange={(e) => update({ course_price: Number(e.target.value) })} />
+          </label>
+          <label className="admin-field">
+            <span>قيمة الخصم</span>
+            <Input type="number" value={settings.course_discount_amount} onChange={(e) => update({ course_discount_amount: Number(e.target.value) })} />
+          </label>
+        </div>
+
+        <label className="admin-field">
+          <span>حالة التسجيل</span>
+          <select value={settings.registration_open ? 'open' : 'closed'} onChange={(e) => update({ registration_open: e.target.value === 'open' })}>
+            <option value="open">مفتوح</option>
+            <option value="closed">مغلق</option>
+          </select>
+        </label>
+
+        <label className="admin-field">
+          <span>رقم واتساب الإدارة</span>
+          <Input dir="ltr" className="text-left" value={settings.whatsapp_number} onChange={(e) => update({ whatsapp_number: e.target.value })} />
+        </label>
+
+        <div className="rounded-2xl border border-cyan-400/15 bg-slate-950/40 p-4">
+          <h3 className="mb-3 font-bold text-white">قسم الهداية بعد إكمال الكورس</h3>
+
+          <label className="admin-field">
+            <span>عنوان القسم</span>
+            <Input value={settings.guide_title} onChange={(e) => update({ guide_title: e.target.value })} />
+          </label>
+
+          <label className="admin-field">
+            <span>وصف القسم</span>
+            <textarea value={settings.guide_intro} onChange={(e) => update({ guide_intro: e.target.value })} />
+          </label>
+
+          {settings.guide_items.map((item, index) => (
+            <div key={item.id} className="mt-3 space-y-2 rounded-xl border border-white/8 bg-slate-900/40 p-3">
+              <label className="admin-field">
+                <span>عنوان العنصر {index + 1}</span>
+                <Input value={item.title} onChange={(e) => updateGuideItem(item.id, { title: e.target.value })} />
+              </label>
+              <label className="admin-field">
+                <span>نص العنصر</span>
+                <textarea value={item.description} onChange={(e) => updateGuideItem(item.id, { description: e.target.value })} />
+              </label>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="admin-card space-y-5">
+        <div>
+          <h2 className="font-bold text-white">الفاتورة وصفحة التحقق</h2>
+          <p className="mt-1 text-xs text-slate-500">يظهر QR الفريد تلقائيًا في كل فاتورة.</p>
+        </div>
+
+        <label className="admin-field">
+          <span>اسم الشركة في الفاتورة</span>
+          <Input value={settings.invoice_company_name} onChange={(e) => update({ invoice_company_name: e.target.value })} />
+        </label>
+
+        <label className="admin-field">
+          <span>عنوان الشركة</span>
+          <textarea value={settings.invoice_address} onChange={(e) => update({ invoice_address: e.target.value })} />
+        </label>
+
+        <label className="admin-field">
+          <span>الرقم الضريبي</span>
+          <Input value={settings.invoice_tax_number} onChange={(e) => update({ invoice_tax_number: e.target.value })} />
+        </label>
+
+        <label className="admin-field">
+          <span>رسالة صفحة التحقق</span>
+          <textarea value={settings.verification_message} onChange={(e) => update({ verification_message: e.target.value })} />
+        </label>
+
+        <label className="admin-field">
+          <span>رابط التحقق</span>
+          <Input value={settings.verification_link} onChange={(e) => update({ verification_link: e.target.value })} />
+        </label>
+      </article>
+
+      <div className="xl:col-span-2 flex justify-end">
+        <Button className="submit-button" onClick={save} disabled={saving}>{saving ? <Loader2 className="animate-spin" /> : <Save />} حفظ الإعدادات</Button>
+      </div>
+    </div>
+  );
+}

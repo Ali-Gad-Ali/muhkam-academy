@@ -25,12 +25,19 @@ export type FormQuestion = {
   condition: QuestionCondition;
 };
 
+export type GuideItem = {
+  id: string;
+  title: string;
+  description: string;
+};
+
 export type SiteSettings = {
   id: string;
   brand_name: string;
   course_name: string;
   course_description: string;
   course_price: number;
+  course_discount_amount: number;
   currency: string;
   registration_open: boolean;
   whatsapp_number: string;
@@ -39,6 +46,9 @@ export type SiteSettings = {
   invoice_tax_number: string;
   verification_message: string;
   verification_link: string;
+  guide_title: string;
+  guide_intro: string;
+  guide_items: GuideItem[];
   logo_url?: string | null;
 };
 

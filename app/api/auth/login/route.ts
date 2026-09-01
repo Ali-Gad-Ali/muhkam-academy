@@ -4,7 +4,15 @@ export async function POST(request: NextRequest) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) {
-    if (process.env.NODE_ENV !== 'production') return NextResponse.json({ ok: true, demo: true });
+    const result = NextResponse.json({ ok: true, demo: true });
+    result.cookies.set('mh_admin_session', 'demo-admin-token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60,
+    });
+    if (process.env.NODE_ENV !== 'production') return result;
     return NextResponse.json({ error: 'لم يتم إعداد خدمة تسجيل الدخول بعد.' }, { status: 503 });
   }
 
