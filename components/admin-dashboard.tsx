@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 import { defaultQuestions, defaultSettings } from '@/lib/defaults';
+import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import type { ApplicationRecord, DashboardPayload, FormQuestion, InvoiceRecord, QuestionType, SiteSettings } from '@/lib/types';
 
 type AdminTab = 'overview' | 'applications' | 'questions' | 'invoices' | 'settings';
@@ -539,7 +540,7 @@ function Invoices({ invoices }: { invoices: InvoiceRecord[] }) {
                   <td>
                     <div className="row-actions">
                       <a className="icon-button" href={`/invoice/${invoice.public_token}`} target="_blank" aria-label="عرض الفاتورة"><Eye aria-hidden="true" /></a>
-                      <a className="icon-button" href={`https://wa.me/${invoice.phone.replace(/\D/g, '')}`} target="_blank" aria-label="فتح شات العميل على واتساب"><MessageCircle aria-hidden="true" /></a>
+                      <a className="icon-button" href={buildWhatsAppUrl(invoice.phone)} target="_blank" aria-label="فتح شات العميل على واتساب"><MessageCircle aria-hidden="true" /></a>
                     </div>
                   </td>
                 </tr>

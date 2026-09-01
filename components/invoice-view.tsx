@@ -4,6 +4,7 @@ import { useRef, useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, Code2, MessageCircle, Printer, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
+import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import type { InvoiceRecord, SiteSettings } from '@/lib/types';
 
 const subscribeToOrigin = () => () => undefined;
@@ -33,7 +34,7 @@ export function InvoiceView({ token, initialData }: { token: string; initialData
     `تاريخ الإصدار: ${new Date(invoice.issued_at).toLocaleDateString('ar-EG')}`,
     `رابط التحقق: ${verifyUrl}`,
   ].join('\n');
-  const customerWhatsappUrl = `https://wa.me/${invoice.phone.replace(/\D/g, '')}?text=${encodeURIComponent(invoiceSummaryText)}`;
+  const customerWhatsappUrl = buildWhatsAppUrl(invoice.phone, invoiceSummaryText);
 
   async function shareInvoiceImage() {
     if (!invoiceRef.current) return;

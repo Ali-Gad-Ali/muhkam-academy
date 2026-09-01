@@ -5,11 +5,8 @@ import Link from 'next/link';
 import { CheckCircle2, Code2, Loader2, MessageCircle, UploadCloud } from 'lucide-react';
 
 import { defaultQuestions, defaultSettings } from '@/lib/defaults';
+import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import type { FormQuestion, PublicFormPayload } from '@/lib/types';
-
-function onlyDigits(value: string) {
-  return value.replace(/\D/g, '');
-}
 
 export function ApplicationForm() {
   const [payload, setPayload] = useState<PublicFormPayload>({ settings: defaultSettings, questions: defaultQuestions });
@@ -71,7 +68,7 @@ export function ApplicationForm() {
   }
 
   const { settings } = payload;
-  const whatsappUrl = `https://wa.me/${onlyDigits(settings.whatsapp_number)}`;
+  const whatsappUrl = buildWhatsAppUrl(settings.whatsapp_number || '');
   const effectivePrice = Math.max(0, Number(settings.course_price) - Number(settings.course_discount_amount || 0));
 
   return (
@@ -111,7 +108,7 @@ export function ApplicationForm() {
           <h1>تم استلام طلبك بنجاح</h1>
           <p>سيراجع فريقنا بياناتك وإثبات الدفع، ويمكنك التواصل معنا عبر واتساب في أي وقت.</p>
           <b className="reference-chip">رقم الطلب: {successId.slice(0, 12)}</b>
-          <a className="primary-button" href={`${whatsappUrl}?text=${encodeURIComponent(`مرحبا، قدمت في ${settings.course_name} ورقم طلبي ${successId}`)}`} target="_blank" rel="noreferrer">
+          <a className="primary-button" href={buildWhatsAppUrl(settings.whatsapp_number || '', `مرحبا، قدمت في ${settings.course_name} ورقم طلبي ${successId}`)} target="_blank" rel="noreferrer">
             <MessageCircle aria-hidden="true" />
             تواصل مع الإدارة
           </a>

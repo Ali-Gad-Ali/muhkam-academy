@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, BookOpenCheck, Code2, MessageCircle, Sparkles } from 'lucide-react';
 
 import { defaultSettings } from '@/lib/defaults';
+import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import type { SiteSettings } from '@/lib/types';
 
 export default function HomePage() {
@@ -22,8 +23,7 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const whatsappNumber = (settings.whatsapp_number || '').replace(/\D/g, '');
-  const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}` : '#';
+  const whatsappUrl = buildWhatsAppUrl(settings.whatsapp_number || '');
   const effectivePrice = Math.max(0, Number(settings.course_price) - Number(settings.course_discount_amount || 0));
   const visibleGuideItems = (settings.guide_items || []).filter((item) => item.active !== false);
 
@@ -37,7 +37,7 @@ export default function HomePage() {
             <small>Learn. Build. Grow.</small>
           </span>
         </Link>
-        <a className="ghost-link" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={!whatsappNumber} onClick={(event) => { if (!whatsappNumber) event.preventDefault(); }}>
+        <a className="ghost-link" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={whatsappUrl === '#'} onClick={(event) => { if (whatsappUrl === '#') event.preventDefault(); }}>
           <MessageCircle aria-hidden="true" />
           تواصل معنا
         </a>
@@ -53,7 +53,7 @@ export default function HomePage() {
               سجل الآن
               <ArrowLeft aria-hidden="true" />
             </Link>
-            <a className="secondary-button" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={!whatsappNumber} onClick={(event) => { if (!whatsappNumber) event.preventDefault(); }}>
+            <a className="secondary-button" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={whatsappUrl === '#'} onClick={(event) => { if (whatsappUrl === '#') event.preventDefault(); }}>
               <MessageCircle aria-hidden="true" />
               اسأل على واتساب
             </a>
