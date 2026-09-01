@@ -210,8 +210,9 @@ export function AdminDashboard() {
   }
 
   const paid = data.applications.filter((item) => item.payment_status === 'paid').length;
-  const pending = data.applications.filter((item) => item.payment_status === 'pending').length;
+  const underReview = data.applications.filter((item) => item.status === 'reviewing').length;
   const revenue = data.invoices.filter((item) => item.status === 'issued').reduce((sum, item) => sum + Number(item.amount), 0);
+  const applicationsCount = data.applications.filter((item) => item.status === 'reviewing').length;
 
   return (
     <main className="admin-layout">
@@ -227,7 +228,7 @@ export function AdminDashboard() {
             <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
               <Icon aria-hidden="true" />
               {label}
-              {id === 'applications' ? <b>{data.applications.length}</b> : null}
+              {id === 'applications' ? <b>{applicationsCount}</b> : null}
             </button>
           ))}
         </nav>
@@ -248,7 +249,7 @@ export function AdminDashboard() {
 
         {data.demo ? <div className="demo-banner">أنت في وضع المعاينة. أضف مفاتيح Supabase على Vercel لتفعيل الحفظ الحقيقي.</div> : null}
 
-        {tab === 'overview' ? <Overview applications={data.applications} paid={paid} pending={pending} revenue={revenue} setTab={setTab} /> : null}
+        {tab === 'overview' ? <Overview applications={data.applications} paid={paid} pending={underReview} revenue={revenue} setTab={setTab} /> : null}
         {tab === 'applications' ? (
           <Applications
             applications={filtered}
