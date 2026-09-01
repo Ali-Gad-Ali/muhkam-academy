@@ -61,3 +61,58 @@ export const demoApplications: ApplicationRecord[] = [
 ];
 
 export const demoInvoices: InvoiceRecord[] = [];
+
+export function normalizeSiteSettings(settings?: Partial<SiteSettings> | null): SiteSettings {
+  return {
+    ...defaultSettings,
+    ...settings,
+    course_price: Number(settings?.course_price ?? defaultSettings.course_price),
+    course_discount_amount: Number(settings?.course_discount_amount ?? defaultSettings.course_discount_amount),
+    registration_open: settings?.registration_open ?? defaultSettings.registration_open,
+    guide_title: settings?.guide_title || defaultSettings.guide_title,
+    guide_intro: settings?.guide_intro || defaultSettings.guide_intro,
+    guide_items: Array.isArray(settings?.guide_items) && settings.guide_items.length ? settings.guide_items : defaultSettings.guide_items,
+  };
+}
+
+export function siteSettingsPayload(settings: SiteSettings) {
+  return {
+    brand_name: settings.brand_name,
+    course_name: settings.course_name,
+    course_description: settings.course_description,
+    course_price: settings.course_price,
+    course_discount_amount: settings.course_discount_amount,
+    currency: settings.currency,
+    registration_open: settings.registration_open,
+    whatsapp_number: settings.whatsapp_number,
+    invoice_company_name: settings.invoice_company_name,
+    invoice_address: settings.invoice_address,
+    invoice_tax_number: settings.invoice_tax_number,
+    verification_message: settings.verification_message,
+    verification_link: settings.verification_link,
+    guide_title: settings.guide_title,
+    guide_intro: settings.guide_intro,
+    guide_items: settings.guide_items,
+    logo_url: settings.logo_url,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function legacySiteSettingsPayload(settings: SiteSettings) {
+  return {
+    brand_name: settings.brand_name,
+    course_name: settings.course_name,
+    course_description: settings.course_description,
+    course_price: settings.course_price,
+    currency: settings.currency,
+    registration_open: settings.registration_open,
+    whatsapp_number: settings.whatsapp_number,
+    invoice_company_name: settings.invoice_company_name,
+    invoice_address: settings.invoice_address,
+    invoice_tax_number: settings.invoice_tax_number,
+    verification_message: settings.verification_message,
+    verification_link: settings.verification_link,
+    logo_url: settings.logo_url,
+    updated_at: new Date().toISOString(),
+  };
+}

@@ -18,6 +18,12 @@ create table if not exists public.site_settings (
   updated_at timestamptz not null default now()
 );
 
+alter table public.site_settings
+  add column if not exists course_discount_amount numeric(12,2) not null default 0,
+  add column if not exists guide_title text not null default 'هداية بعد إكمال الكورس',
+  add column if not exists guide_intro text not null default 'بمجرد إنهاء الكورس، ستتلقى هذه المزايا القيمة لتبدأ رحلتك المهنية بثقة.',
+  add column if not exists guide_items jsonb not null default '[]'::jsonb;
+
 create table if not exists public.form_questions (
   id uuid primary key default gen_random_uuid(),
   system_key text,

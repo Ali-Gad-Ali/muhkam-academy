@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { defaultQuestions, defaultSettings, demoApplications, demoInvoices } from '@/lib/defaults';
+import { defaultQuestions, defaultSettings, demoApplications, demoInvoices, normalizeSiteSettings } from '@/lib/defaults';
 import { createSignedProofUrl, isLocalDemo, requireAdmin, supabaseRest } from '@/lib/supabase-server';
 import type { ApplicationRecord, FormQuestion, InvoiceRecord, SiteSettings } from '@/lib/types';
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       supabaseRest<InvoiceRecord[]>('invoices?order=issued_at.desc'),
     ]);
     const withUrls = await Promise.all(applications.map(async (app) => ({ ...app, payment_proof_url: app.payment_proof_path ? await createSignedProofUrl(app.payment_proof_path) : null })));
-    return NextResponse.json({ settings: settingsRows[0] || defaultSettings, questions, applications: withUrls, invoices });
+    return NextResponse.json({ settings: normalizeSiteSettings(settingsRows[0]), questions, applications: withUrls, invoices });
   } catch {
     return NextResponse.json({ error: 'تعذر تحميل لوحة التحكم.' }, { status: 503 });
   }
