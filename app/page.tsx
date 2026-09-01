@@ -1,12 +1,31 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, BookOpenCheck, Code2, MessageCircle, Sparkles } from 'lucide-react';
 
 import { defaultSettings } from '@/lib/defaults';
+import type { SiteSettings } from '@/lib/types';
 
 export default function HomePage() {
-  const settings = defaultSettings;
-  const whatsappUrl = `https://wa.me/${settings.whatsapp_number.replace(/\D/g, '')}`;
+  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void fetch('/api/public/form')
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as { settings?: SiteSettings };
+        if (data.settings) setSettings(data.settings);
+      })
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const whatsappNumber = (settings.whatsapp_number || '').replace(/\D/g, '');
+  const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}` : '#';
   const effectivePrice = Math.max(0, Number(settings.course_price) - Number(settings.course_discount_amount || 0));
+  const visibleGuideItems = (settings.guide_items || []).filter((item) => item.active !== false);
 
   return (
     <main className="public-page">
@@ -18,7 +37,7 @@ export default function HomePage() {
             <small>Learn. Build. Grow.</small>
           </span>
         </Link>
-        <a className="ghost-link" href={whatsappUrl} target="_blank" rel="noreferrer">
+        <a className="ghost-link" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={!whatsappNumber} onClick={(event) => { if (!whatsappNumber) event.preventDefault(); }}>
           <MessageCircle aria-hidden="true" />
           تواصل معنا
         </a>
@@ -34,7 +53,7 @@ export default function HomePage() {
               سجل الآن
               <ArrowLeft aria-hidden="true" />
             </Link>
-            <a className="secondary-button" href={whatsappUrl} target="_blank" rel="noreferrer">
+            <a className="secondary-button" href={whatsappUrl} target="_blank" rel="noreferrer" aria-disabled={!whatsappNumber} onClick={(event) => { if (!whatsappNumber) event.preventDefault(); }}>
               <MessageCircle aria-hidden="true" />
               اسأل على واتساب
             </a>
@@ -66,7 +85,7 @@ export default function HomePage() {
           </div>
         </div>
         <div className="guide-grid">
-          {settings.guide_items.map((item) => (
+          {visibleGuideItems.map((item) => (
             <article className="guide-card" key={item.id}>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
@@ -74,6 +93,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {loading ? <div className="sr-only" aria-live="polite">جار تحميل بيانات الصفحات...</div> : null}
     </main>
   );
 }

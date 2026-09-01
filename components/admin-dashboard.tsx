@@ -413,6 +413,19 @@ function Questions(props: {
     }));
   }
 
+  function updateCondition(id: string, questionId: string | null, equals?: string) {
+    props.setData((current) => ({
+      ...current,
+      questions: current.questions.map((question) => {
+        if (question.id !== id) return question;
+        if (!questionId) return { ...question, condition: null };
+        const target = current.questions.find((item) => item.id === questionId);
+        const nextEquals = equals ?? (target && (target.type === 'single_choice' || target.type === 'yes_no') ? (target.options[0] ?? '') : '');
+        return { ...question, condition: { questionId, equals: nextEquals } };
+      }),
+    }));
+  }
+
   return (
     <div className="stack">
       <div className="toolbar-row">
@@ -425,34 +438,71 @@ function Questions(props: {
           </button>
         </div>
       </div>
-      {props.questions.map((question, index) => (
-        <article className="question-card" key={question.id}>
-          <div className="question-fields">
-            <label>
-              نص السؤال
-              <input value={question.label} onChange={(event) => update(question.id, { label: event.target.value })} />
-            </label>
-            <label>
-              نوع الإجابة
-              <select value={question.type} onChange={(event) => update(question.id, { type: event.target.value as QuestionType })}>
-                {Object.entries(questionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            <label>
-              الحالة
-              <select value={question.required ? 'required' : 'optional'} onChange={(event) => update(question.id, { required: event.target.value === 'required' })}>
-                <option value="required">مطلوب</option>
-                <option value="optional">اختياري</option>
-              </select>
-            </label>
-          </div>
-          <div className="row-actions">
-            <button className="icon-button" onClick={() => props.moveQuestion(index, -1)} aria-label="نقل لأعلى"><ArrowUp aria-hidden="true" /></button>
-            <button className="icon-button" onClick={() => props.moveQuestion(index, 1)} aria-label="نقل لأسفل"><ArrowDown aria-hidden="true" /></button>
-            <button className="icon-button danger" onClick={() => props.deleteQuestion(question.id)} aria-label="حذف"><Trash2 aria-hidden="true" /></button>
-          </div>
-        </article>
-      ))}
+      {props.questions.map((question, index) => {
+        const conditionQuestion = props.questions.find((item) => item.id === question.condition?.questionId && item.id !== question.id);
+        const conditionOptions = conditionQuestion && (conditionQuestion.type === 'single_choice' || conditionQuestion.type === 'yes_no')
+          ? conditionQuestion.options
+          : [];
+
+        return (
+          <article className="question-card" key={question.id}>
+            <div className="question-fields">
+              <label>
+                نص السؤال
+                <input value={question.label} onChange={(event) => update(question.id, { label: event.target.value })} />
+              </label>
+              <label>
+                نوع الإجابة
+                <select value={question.type} onChange={(event) => update(question.id, { type: event.target.value as QuestionType })}>
+                  {Object.entries(questionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label>
+                الحالة
+                <select value={question.required ? 'required' : 'optional'} onChange={(event) => update(question.id, { required: event.target.value === 'required' })}>
+                  <option value="required">مطلوب</option>
+                  <option value="optional">اختياري</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="question-condition">
+              <label>
+                يظهر هذا السؤال فقط إذا كان جواب السؤال
+                <select value={question.condition?.questionId ?? ''} onChange={(event) => updateCondition(question.id, event.target.value || null)}>
+                  <option value="">لا يوجد شرط</option>
+                  {props.questions.filter((item) => item.id !== question.id).map((item) => (
+                    <option key={item.id} value={item.id}>{item.label || 'سؤال بدون عنوان'}</option>
+                  ))}
+                </select>
+              </label>
+
+              {conditionQuestion ? (
+                <label>
+                  يساوي
+                  {conditionOptions.length ? (
+                    <select value={question.condition?.equals ?? conditionOptions[0]} onChange={(event) => updateCondition(question.id, conditionQuestion.id, event.target.value)}>
+                      {conditionOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      value={question.condition?.equals ?? ''}
+                      onChange={(event) => updateCondition(question.id, conditionQuestion.id, event.target.value)}
+                      placeholder="اكتب قيمة الشرط"
+                    />
+                  )}
+                </label>
+              ) : null}
+            </div>
+
+            <div className="row-actions">
+              <button className="icon-button" onClick={() => props.moveQuestion(index, -1)} aria-label="نقل لأعلى"><ArrowUp aria-hidden="true" /></button>
+              <button className="icon-button" onClick={() => props.moveQuestion(index, 1)} aria-label="نقل لأسفل"><ArrowDown aria-hidden="true" /></button>
+              <button className="icon-button danger" onClick={() => props.deleteQuestion(question.id)} aria-label="حذف"><Trash2 aria-hidden="true" /></button>
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -507,12 +557,32 @@ function SettingsPanel({ settings, setData, save, saving }: { settings: SiteSett
     setData((current) => ({ ...current, settings: { ...current.settings, ...changes } }));
   }
 
-  function updateGuideItem(id: string, changes: Partial<{ title: string; description: string }>) {
+  function updateGuideItem(id: string, changes: Partial<{ title: string; description: string; active: boolean }>) {
     setData((current) => ({
       ...current,
       settings: {
         ...current.settings,
-        guide_items: current.settings.guide_items.map((item) => (item.id === id ? { ...item, ...changes } : item)),
+        guide_items: current.settings.guide_items.map((item) => (item.id === id ? { ...item, ...changes, active: changes.active ?? item.active ?? true } : item)),
+      },
+    }));
+  }
+
+  function addGuideItem() {
+    setData((current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        guide_items: [...current.settings.guide_items, { id: crypto.randomUUID(), title: 'عنصر جديد', description: 'اكتب نص العنصر...', active: true }],
+      },
+    }));
+  }
+
+  function removeGuideItem(id: string) {
+    setData((current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        guide_items: current.settings.guide_items.filter((item) => item.id !== id),
       },
     }));
   }
@@ -547,10 +617,20 @@ function SettingsPanel({ settings, setData, save, saving }: { settings: SiteSett
         <label>وصف القسم<textarea value={settings.guide_intro} onChange={(event) => update({ guide_intro: event.target.value })} /></label>
         {settings.guide_items.map((item, index) => (
           <div className="nested-card" key={item.id}>
+            <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <input type="checkbox" checked={item.active !== false} onChange={(event) => updateGuideItem(item.id, { active: event.target.checked })} />
+                <span>إظهار العنصر</span>
+              </label>
+              <button type="button" className="icon-button" aria-label="حذف العنصر" onClick={() => removeGuideItem(item.id)}><Trash2 aria-hidden="true" /></button>
+            </div>
             <label>عنوان العنصر {index + 1}<input value={item.title} onChange={(event) => updateGuideItem(item.id, { title: event.target.value })} /></label>
             <label>النص<textarea value={item.description} onChange={(event) => updateGuideItem(item.id, { description: event.target.value })} /></label>
           </div>
         ))}
+        <button type="button" className="secondary-button" onClick={addGuideItem}>
+          <Plus aria-hidden="true" /> إضافة عنصر
+        </button>
       </article>
 
       <div className="settings-actions">

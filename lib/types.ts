@@ -29,6 +29,7 @@ export type GuideItem = {
   id: string;
   title: string;
   description: string;
+  active: boolean;
 };
 
 export type SiteSettings = {

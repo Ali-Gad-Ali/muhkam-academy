@@ -1066,7 +1066,6 @@ tbody tr:hover {
 
 .qr-card {
   display: grid;
-  gap: 12px;
   justify-items: center;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -1078,7 +1077,6 @@ tbody tr:hover {
   height: 168px;
 }
 
-.qr-card span,
 .verified-note {
   display: inline-flex;
   align-items: center;

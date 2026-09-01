@@ -18,9 +18,9 @@ export const defaultSettings: SiteSettings = {
   guide_title: 'هداية بعد إكمال الكورس',
   guide_intro: 'بمجرد إنهاء الكورس، ستتلقى هذه المزايا القيمة لتبدأ رحلتك المهنية بثقة.',
   guide_items: [
-    { id: 'prompt-master', title: 'حساب Prompt Master', description: '1- اكونت برومبت ماستر\n2- باكدج عباره عن cv + لينكدان + كفر ليتر\n3- اشتراك ب 1000 جنية علي موقع برومبت ماستر\n4- اكونت جيمناي مدفوع مجاني مع الكورس' },
-    { id: 'cv', title: 'بريدك المهني', description: 'تجهيز سيرة ذاتية احترافية، ملف LinkedIn، وكفر ليتير جاهز للتقديم.' },
-    { id: 'gpt', title: 'مزايا إضافية', description: 'دعم فني لأسئلة المشروع، جلسات متابعة، وتوجيه في بناء مسارك المهني.' },
+    { id: 'prompt-master', title: 'حساب Prompt Master', description: '1- اكونت برومبت ماستر\n2- باكدج عباره عن cv + لينكدان + كفر ليتر\n3- اشتراك ب 1000 جنية علي موقع برومبت ماستر\n4- اكونت جيمناي مدفوع مجاني مع الكورس', active: true },
+    { id: 'cv', title: 'بريدك المهني', description: 'تجهيز سيرة ذاتية احترافية، ملف LinkedIn، وكفر ليتير جاهز للتقديم.', active: true },
+    { id: 'gpt', title: 'مزايا إضافية', description: 'دعم فني لأسئلة المشروع، جلسات متابعة، وتوجيه في بناء مسارك المهني.', active: true },
   ],
   logo_url: null,
 };
@@ -63,6 +63,15 @@ export const demoApplications: ApplicationRecord[] = [
 export const demoInvoices: InvoiceRecord[] = [];
 
 export function normalizeSiteSettings(settings?: Partial<SiteSettings> | null): SiteSettings {
+  const guideItems = Array.isArray(settings?.guide_items) && settings.guide_items.length
+    ? settings.guide_items.map((item) => ({
+        id: item.id || crypto.randomUUID(),
+        title: item.title || 'عنصر جديد',
+        description: item.description || '',
+        active: item.active !== false,
+      }))
+    : defaultSettings.guide_items.map((item) => ({ ...item, active: item.active !== false }));
+
   return {
     ...defaultSettings,
     ...settings,
@@ -71,7 +80,7 @@ export function normalizeSiteSettings(settings?: Partial<SiteSettings> | null): 
     registration_open: settings?.registration_open ?? defaultSettings.registration_open,
     guide_title: settings?.guide_title || defaultSettings.guide_title,
     guide_intro: settings?.guide_intro || defaultSettings.guide_intro,
-    guide_items: Array.isArray(settings?.guide_items) && settings.guide_items.length ? settings.guide_items : defaultSettings.guide_items,
+    guide_items: guideItems,
   };
 }
 

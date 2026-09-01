@@ -25,7 +25,15 @@ export function InvoiceView({ token, initialData }: { token: string; initialData
 
   const { invoice, settings } = initialData;
   const verifyUrl = `${origin}/verify/${token}`;
-  const customerWhatsappUrl = `https://wa.me/${invoice.phone.replace(/\D/g, '')}`;
+  const invoiceSummaryText = [
+    `فاتورة ${invoice.invoice_number}`,
+    `العميل: ${invoice.recipient_name}`,
+    `المبلغ: ${Number(invoice.amount).toLocaleString('ar-EG')} ${settings.currency}`,
+    `طريقة الدفع: ${invoice.payment_method}`,
+    `تاريخ الإصدار: ${new Date(invoice.issued_at).toLocaleDateString('ar-EG')}`,
+    `رابط التحقق: ${verifyUrl}`,
+  ].join('\n');
+  const customerWhatsappUrl = `https://wa.me/${invoice.phone.replace(/\D/g, '')}?text=${encodeURIComponent(invoiceSummaryText)}`;
 
   async function shareInvoiceImage() {
     if (!invoiceRef.current) return;
@@ -56,10 +64,10 @@ export function InvoiceView({ token, initialData }: { token: string; initialData
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000);
       window.open(customerWhatsappUrl, '_blank', 'noopener,noreferrer');
-      setShareStatus('تم تحميل صورة الفاتورة. ارفعها في شات العميل المفتوح.');
+      setShareStatus('تم تحميل صورة الفاتورة. تم فتح شات العميل برسالة نصية مع تفاصيل الفاتورة.');
     } catch {
       window.open(customerWhatsappUrl, '_blank', 'noopener,noreferrer');
-      setShareStatus('تعذر تجهيز الصورة تلقائيا. تم فتح شات العميل.');
+      setShareStatus('تعذر تجهيز الصورة تلقائيا. تم فتح شات العميل برسالة نصية مع تفاصيل الفاتورة.');
     }
   }
 
@@ -126,7 +134,6 @@ export function InvoiceView({ token, initialData }: { token: string; initialData
           </div>
           <div className="qr-card">
             <QRCodeSVG value={verifyUrl} size={168} bgColor="#ffffff" fgColor="#111827" level="M" />
-            <span><ShieldCheck aria-hidden="true" /> امسح للتحقق</span>
           </div>
         </footer>
       </article>
