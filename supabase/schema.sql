@@ -8,6 +8,7 @@ create table if not exists public.site_settings (
   course_price numeric(12,2) not null default 2500,
   currency text not null default 'EGP',
   registration_open boolean not null default true,
+  registration_limit integer,
   whatsapp_number text not null default '',
   invoice_company_name text not null default 'Muhkam Academy',
   invoice_address text not null default '',

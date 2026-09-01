@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { defaultQuestions } from '@/lib/defaults';
+import { defaultQuestions, normalizeSiteSettings } from '@/lib/defaults';
 import { hashClientIp, isSupabaseConfigured, supabaseRest, uploadPrivateFile } from '@/lib/supabase-server';
 import { formatPhoneForStorage } from '@/lib/whatsapp';
-import type { ApplicationAnswer, FormQuestion } from '@/lib/types';
+import type { ApplicationAnswer, FormQuestion, SiteSettings } from '@/lib/types';
 
 const acceptedFiles = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 
@@ -21,6 +21,19 @@ export async function POST(request: NextRequest) {
     if (typeof honeypot === 'string' && honeypot) return NextResponse.json({ ok: true });
     const answersEntry = formData.get('answers');
     const rawAnswers = JSON.parse(typeof answersEntry === 'string' ? answersEntry : '{}') as Record<string, string>;
+
+    if (isSupabaseConfigured()) {
+      const [settingsRows, applications] = await Promise.all([
+        supabaseRest<SiteSettings[]>('site_settings?id=eq.main&limit=1'),
+        supabaseRest<Array<{ id: string }>>('applications?select=id'),
+      ]);
+      const settings = normalizeSiteSettings(settingsRows[0]);
+      const limitReached = settings.registration_limit !== null && Number(settings.registration_limit) > 0 && applications.length >= Number(settings.registration_limit);
+      if (limitReached || !settings.registration_open) {
+        return NextResponse.json({ error: 'التسجيل مغلق الآن بسبب الوصول إلى الحد المحدد من الطلبات.' }, { status: 403 });
+      }
+    }
+
     const questions = isSupabaseConfigured()
       ? await supabaseRest<FormQuestion[]>('form_questions?active=eq.true&order=position.asc')
       : defaultQuestions;

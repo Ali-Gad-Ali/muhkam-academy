@@ -13,11 +13,17 @@ export async function GET() {
     });
   }
   try {
-    const [settingsRows, questions] = await Promise.all([
+    const [settingsRows, questions, applications] = await Promise.all([
       supabaseRest<SiteSettings[]>('site_settings?id=eq.main&limit=1'),
       supabaseRest<FormQuestion[]>('form_questions?active=eq.true&order=position.asc'),
+      supabaseRest<Array<{ id: string }>>('applications?select=id'),
     ]);
-    return NextResponse.json({ settings: normalizeSiteSettings(settingsRows[0]), questions });
+    const settings = normalizeSiteSettings(settingsRows[0]);
+    const limitReached = settings.registration_limit !== null && Number(settings.registration_limit) > 0 && applications.length >= Number(settings.registration_limit);
+    return NextResponse.json({
+      settings: { ...settings, registration_open: !limitReached && settings.registration_open },
+      questions,
+    });
   } catch {
     return NextResponse.json({ error: 'تعذر تحميل نموذج التقديم حاليًا.' }, { status: 503 });
   }

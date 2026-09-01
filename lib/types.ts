@@ -41,6 +41,7 @@ export type SiteSettings = {
   course_discount_amount: number;
   currency: string;
   registration_open: boolean;
+  registration_limit: number | null;
   whatsapp_number: string;
   invoice_company_name: string;
   invoice_address: string;

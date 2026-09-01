@@ -5,7 +5,7 @@ export function formatEgyptWhatsAppNumber(value: string) {
   const cleaned = digits.startsWith('00') ? digits.slice(2) : digits;
 
   if (cleaned.startsWith('2')) return `+${cleaned}`;
-  if (cleaned.startsWith('0')) return `+2${cleaned.slice(1)}`;
+  if (cleaned.startsWith('0')) return `+2${cleaned}`;
   if (cleaned.length === 10) return `+2${cleaned}`;
   return `+${cleaned}`;
 }

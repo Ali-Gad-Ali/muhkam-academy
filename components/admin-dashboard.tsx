@@ -600,6 +600,7 @@ function SettingsPanel({ settings, setData, save, saving }: { settings: SiteSett
           <label>قيمة الخصم<input type="number" value={settings.course_discount_amount} onChange={(event) => update({ course_discount_amount: Number(event.target.value) })} /></label>
         </div>
         <label>حالة التسجيل<select value={settings.registration_open ? 'open' : 'closed'} onChange={(event) => update({ registration_open: event.target.value === 'open' })}><option value="open">مفتوح</option><option value="closed">مغلق</option></select></label>
+        <label>حد عدد الطلبات قبل إغلاق التسجيل<input type="number" min="0" value={settings.registration_limit ?? ''} onChange={(event) => update({ registration_limit: event.target.value === '' ? null : Number(event.target.value) })} /></label>
         <label>رقم واتساب الإدارة<input dir="ltr" value={settings.whatsapp_number} onChange={(event) => update({ whatsapp_number: formatEgyptWhatsAppNumber(event.target.value) })} /></label>
       </article>
 
