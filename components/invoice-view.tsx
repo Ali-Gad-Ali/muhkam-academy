@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, Code2, MessageCircle, Printer, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -10,6 +10,8 @@ const subscribeToOrigin = () => () => undefined;
 
 export function InvoiceView({ token, initialData }: { token: string; initialData: { invoice: InvoiceRecord; settings: SiteSettings } | null }) {
   const origin = useSyncExternalStore(subscribeToOrigin, () => window.location.origin, () => process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+  const invoiceRef = useRef<HTMLElement>(null);
+  const [shareStatus, setShareStatus] = useState('');
 
   if (!initialData) {
     return (
@@ -23,22 +25,59 @@ export function InvoiceView({ token, initialData }: { token: string; initialData
 
   const { invoice, settings } = initialData;
   const verifyUrl = `${origin}/verify/${token}`;
-  const whatsappMessage = `مرحبا، هذه فاتورتي رقم ${invoice.invoice_number} من ${settings.brand_name}: ${origin}/invoice/${token}`;
+  const customerWhatsappUrl = `https://wa.me/${invoice.phone.replace(/\D/g, '')}`;
+
+  async function shareInvoiceImage() {
+    if (!invoiceRef.current) return;
+    setShareStatus('جار تجهيز صورة الفاتورة...');
+    try {
+      const { toBlob } = await import('html-to-image');
+      const blob = await toBlob(invoiceRef.current, {
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        pixelRatio: 2,
+      });
+      if (!blob) throw new Error('Image generation failed');
+
+      const file = new File([blob], `${invoice.invoice_number}.png`, { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `فاتورة ${invoice.invoice_number}`,
+        });
+        setShareStatus('تم تجهيز صورة الفاتورة للمشاركة.');
+        return;
+      }
+
+      const imageUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = `${invoice.invoice_number}.png`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000);
+      window.open(customerWhatsappUrl, '_blank', 'noopener,noreferrer');
+      setShareStatus('تم تحميل صورة الفاتورة. ارفعها في شات العميل المفتوح.');
+    } catch {
+      window.open(customerWhatsappUrl, '_blank', 'noopener,noreferrer');
+      setShareStatus('تعذر تجهيز الصورة تلقائيا. تم فتح شات العميل.');
+    }
+  }
 
   return (
     <main className="invoice-page">
       <div className="invoice-actions">
-        <a className="secondary-button" href={`https://wa.me/${invoice.phone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noreferrer">
+        <button className="secondary-button" onClick={shareInvoiceImage}>
           <MessageCircle aria-hidden="true" />
           مشاركة واتساب
-        </a>
+        </button>
         <button className="primary-button" onClick={() => window.print()}>
           <Printer aria-hidden="true" />
           طباعة / حفظ PDF
         </button>
       </div>
+      {shareStatus ? <p className="share-status">{shareStatus}</p> : null}
 
-      <article className="invoice-paper">
+      <article className="invoice-paper" ref={invoiceRef}>
         <header>
           <div className="brand">
             <span className="brand-icon"><Code2 aria-hidden="true" /></span>
@@ -79,14 +118,14 @@ export function InvoiceView({ token, initialData }: { token: string; initialData
         </section>
 
         <footer>
-          <div>
+          <div className="payment-details">
             <span>طريقة الدفع</span>
             <strong>{invoice.payment_method}</strong>
             <p>{settings.verification_message}</p>
             <small>{settings.invoice_address}{settings.invoice_tax_number ? ` - رقم ضريبي: ${settings.invoice_tax_number}` : ''}</small>
           </div>
           <div className="qr-card">
-            <QRCodeSVG value={verifyUrl} size={112} bgColor="#ffffff" fgColor="#111827" level="M" />
+            <QRCodeSVG value={verifyUrl} size={168} bgColor="#ffffff" fgColor="#111827" level="M" />
             <span><ShieldCheck aria-hidden="true" /> امسح للتحقق</span>
           </div>
         </footer>

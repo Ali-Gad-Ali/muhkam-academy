@@ -262,7 +262,7 @@ export function AdminDashboard() {
           />
         ) : null}
         {tab === 'questions' ? <Questions questions={data.questions} setData={setData} addQuestion={addQuestion} deleteQuestion={deleteQuestion} moveQuestion={moveQuestion} saveQuestions={saveQuestions} saving={saving} /> : null}
-        {tab === 'invoices' ? <Invoices invoices={data.invoices} settings={data.settings} /> : null}
+        {tab === 'invoices' ? <Invoices invoices={data.invoices} /> : null}
         {tab === 'settings' ? <SettingsPanel settings={data.settings} setData={setData} save={saveSettings} saving={saving} /> : null}
       </section>
     </main>
@@ -457,8 +457,7 @@ function Questions(props: {
   );
 }
 
-function Invoices({ invoices, settings }: { invoices: InvoiceRecord[]; settings: SiteSettings }) {
-  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+function Invoices({ invoices }: { invoices: InvoiceRecord[] }) {
   if (!invoices.length) return <article className="admin-card empty-state"><FileText aria-hidden="true" /><p>لا توجد فواتير بعد.</p></article>;
   return (
     <article className="admin-card">
@@ -481,8 +480,6 @@ function Invoices({ invoices, settings }: { invoices: InvoiceRecord[]; settings:
           </thead>
           <tbody>
             {invoices.map((invoice) => {
-              const url = `${origin}/invoice/${invoice.public_token}`;
-              const message = `مرحبا ${invoice.recipient_name}، هذه فاتورتك من ${settings.brand_name}: ${url}`;
               return (
                 <tr key={invoice.id}>
                   <td dir="ltr">{invoice.invoice_number}</td>
@@ -492,7 +489,7 @@ function Invoices({ invoices, settings }: { invoices: InvoiceRecord[]; settings:
                   <td>
                     <div className="row-actions">
                       <a className="icon-button" href={`/invoice/${invoice.public_token}`} target="_blank" aria-label="عرض الفاتورة"><Eye aria-hidden="true" /></a>
-                      <a className="icon-button" href={`https://wa.me/${invoice.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`} target="_blank" aria-label="مشاركة واتساب"><MessageCircle aria-hidden="true" /></a>
+                      <a className="icon-button" href={`https://wa.me/${invoice.phone.replace(/\D/g, '')}`} target="_blank" aria-label="فتح شات العميل على واتساب"><MessageCircle aria-hidden="true" /></a>
                     </div>
                   </td>
                 </tr>
