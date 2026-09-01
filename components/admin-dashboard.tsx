@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 import { defaultQuestions, defaultSettings } from '@/lib/defaults';
-import { buildWhatsAppUrl } from '@/lib/whatsapp';
+import { buildWhatsAppUrl, formatEgyptWhatsAppNumber } from '@/lib/whatsapp';
 import type { ApplicationRecord, DashboardPayload, FormQuestion, InvoiceRecord, QuestionType, SiteSettings } from '@/lib/types';
 
 type AdminTab = 'overview' | 'applications' | 'questions' | 'invoices' | 'settings';
@@ -600,7 +600,7 @@ function SettingsPanel({ settings, setData, save, saving }: { settings: SiteSett
           <label>قيمة الخصم<input type="number" value={settings.course_discount_amount} onChange={(event) => update({ course_discount_amount: Number(event.target.value) })} /></label>
         </div>
         <label>حالة التسجيل<select value={settings.registration_open ? 'open' : 'closed'} onChange={(event) => update({ registration_open: event.target.value === 'open' })}><option value="open">مفتوح</option><option value="closed">مغلق</option></select></label>
-        <label>رقم واتساب الإدارة<input dir="ltr" value={settings.whatsapp_number} onChange={(event) => update({ whatsapp_number: event.target.value })} /></label>
+        <label>رقم واتساب الإدارة<input dir="ltr" value={settings.whatsapp_number} onChange={(event) => update({ whatsapp_number: formatEgyptWhatsAppNumber(event.target.value) })} /></label>
       </article>
 
       <article className="admin-card admin-form">

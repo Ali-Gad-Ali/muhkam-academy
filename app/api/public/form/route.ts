@@ -6,8 +6,11 @@ import type { FormQuestion, SiteSettings } from '@/lib/types';
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
-    const demo = process.env.NODE_ENV !== 'production';
-    return NextResponse.json({ settings: demo ? defaultSettings : { ...defaultSettings, registration_open: false }, questions: defaultQuestions, demo });
+    return NextResponse.json({
+      settings: { ...defaultSettings, registration_open: false },
+      questions: defaultQuestions,
+      demo: false,
+    });
   }
   try {
     const [settingsRows, questions] = await Promise.all([

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { defaultQuestions } from '@/lib/defaults';
 import { hashClientIp, isSupabaseConfigured, supabaseRest, uploadPrivateFile } from '@/lib/supabase-server';
+import { formatPhoneForStorage } from '@/lib/whatsapp';
 import type { ApplicationAnswer, FormQuestion } from '@/lib/types';
 
 const acceptedFiles = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
@@ -57,7 +58,9 @@ export async function POST(request: NextRequest) {
           answers.push({ questionId: question.id, label: question.label, type: question.type, value: file.name, filePath: path });
         }
       } else {
-        answers.push({ questionId: question.id, label: question.label, type: question.type, value: String(rawAnswers[question.id] || '').trim() });
+        const value = String(rawAnswers[question.id] || '').trim();
+        const normalizedValue = question.type === 'phone' ? formatPhoneForStorage(value) : value;
+        answers.push({ questionId: question.id, label: question.label, type: question.type, value: normalizedValue });
       }
     }
 
@@ -73,12 +76,13 @@ export async function POST(request: NextRequest) {
       const question = questions.find((item) => item.system_key === key);
       return question ? String(rawAnswers[question.id] || '').trim() : '';
     };
+    const applicantPhone = formatPhoneForStorage(answerFor('phone'));
     await supabaseRest('applications', {
       method: 'POST',
       body: JSON.stringify({
         id: applicationId,
         applicant_name: answerFor('full_name'),
-        phone: answerFor('phone'),
+        phone: applicantPhone,
         email: answerFor('email'),
         answers,
         status: 'new',

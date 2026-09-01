@@ -1,5 +1,7 @@
 import type { ApplicationRecord, FormQuestion, InvoiceRecord, SiteSettings } from '@/lib/types';
 
+import { formatEgyptWhatsAppNumber } from '@/lib/whatsapp';
+
 export const defaultSettings: SiteSettings = {
   id: 'main',
   brand_name: 'Muhkam Academy',
@@ -9,7 +11,7 @@ export const defaultSettings: SiteSettings = {
   course_discount_amount: 0,
   currency: 'EGP',
   registration_open: true,
-  whatsapp_number: '201000000000',
+  whatsapp_number: '+201000000000',
   invoice_company_name: 'Muhkam Academy',
   invoice_address: 'القاهرة، جمهورية مصر العربية',
   invoice_tax_number: '',
@@ -35,30 +37,7 @@ export const defaultQuestions: FormQuestion[] = [
   { id: 'payment-proof', system_key: 'payment_proof', label: 'صورة إثبات الدفع', type: 'file', required: true, placeholder: null, options: [], position: 7, active: true, condition: { questionId: 'payment-method', equals: 'أونلاين' } },
 ];
 
-export const demoApplications: ApplicationRecord[] = [
-  {
-    id: 'app-demo-1', created_at: new Date(Date.now() - 32 * 60 * 1000).toISOString(), applicant_name: 'أحمد محمد علي', phone: '201012345678', email: 'ahmed@example.com', status: 'reviewing', payment_status: 'pending', payment_proof_path: null,
-    answers: [
-      { questionId: 'full-name', label: 'الاسم بالكامل', type: 'short_text', value: 'أحمد محمد علي' },
-      { questionId: 'phone', label: 'رقم الهاتف', type: 'phone', value: '201012345678' },
-      { questionId: 'email', label: 'البريد الإلكتروني', type: 'email', value: 'ahmed@example.com' },
-      { questionId: 'graduation', label: 'هل أنت متخرج؟', type: 'single_choice', value: 'متخرج' },
-      { questionId: 'qualification', label: 'المؤهل الدراسي', type: 'short_text', value: 'حاسبات ومعلومات' },
-      { questionId: 'payment-method', label: 'طريقة الدفع', type: 'single_choice', value: 'أونلاين' },
-    ],
-  },
-  {
-    id: 'app-demo-2', created_at: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(), applicant_name: 'سارة محمود', phone: '201098765432', email: 'sara@example.com', status: 'accepted', payment_status: 'paid', payment_proof_path: null,
-    answers: [
-      { questionId: 'full-name', label: 'الاسم بالكامل', type: 'short_text', value: 'سارة محمود' },
-      { questionId: 'phone', label: 'رقم الهاتف', type: 'phone', value: '201098765432' },
-      { questionId: 'email', label: 'البريد الإلكتروني', type: 'email', value: 'sara@example.com' },
-      { questionId: 'graduation', label: 'هل أنت متخرج؟', type: 'single_choice', value: 'طالب' },
-      { questionId: 'qualification', label: 'المؤهل الدراسي', type: 'short_text', value: 'كلية الهندسة' },
-      { questionId: 'payment-method', label: 'طريقة الدفع', type: 'single_choice', value: 'أوفلاين' },
-    ],
-  },
-];
+export const demoApplications: ApplicationRecord[] = [];
 
 export const demoInvoices: InvoiceRecord[] = [];
 
@@ -75,6 +54,7 @@ export function normalizeSiteSettings(settings?: Partial<SiteSettings> | null): 
   return {
     ...defaultSettings,
     ...settings,
+    whatsapp_number: settings?.whatsapp_number ? formatEgyptWhatsAppNumber(settings.whatsapp_number) : defaultSettings.whatsapp_number,
     course_price: Number(settings?.course_price ?? defaultSettings.course_price),
     course_discount_amount: Number(settings?.course_discount_amount ?? defaultSettings.course_discount_amount),
     registration_open: settings?.registration_open ?? defaultSettings.registration_open,
@@ -93,7 +73,7 @@ export function siteSettingsPayload(settings: SiteSettings) {
     course_discount_amount: settings.course_discount_amount,
     currency: settings.currency,
     registration_open: settings.registration_open,
-    whatsapp_number: settings.whatsapp_number,
+    whatsapp_number: formatEgyptWhatsAppNumber(settings.whatsapp_number),
     invoice_company_name: settings.invoice_company_name,
     invoice_address: settings.invoice_address,
     invoice_tax_number: settings.invoice_tax_number,

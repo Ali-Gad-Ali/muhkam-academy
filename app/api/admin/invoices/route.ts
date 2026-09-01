@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { isLocalDemo, requireAdmin, supabaseRest } from '@/lib/supabase-server';
+import { formatPhoneForStorage } from '@/lib/whatsapp';
 import type { ApplicationRecord, InvoiceRecord } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     invoice_number: `MH-${now.getFullYear()}-${String(now.getTime()).slice(-7)}`,
     application_id: input.application_id,
     recipient_name: input.recipient_name.trim(),
-    phone: input.phone.trim(),
+    phone: formatPhoneForStorage(input.phone),
     amount: Number(input.amount),
     currency: 'EGP',
     payment_method: input.payment_method,

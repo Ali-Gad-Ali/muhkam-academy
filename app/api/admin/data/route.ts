@@ -6,7 +6,7 @@ import type { ApplicationRecord, FormQuestion, InvoiceRecord, SiteSettings } fro
 
 export async function GET(request: NextRequest) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
-  if (isLocalDemo()) return NextResponse.json({ settings: defaultSettings, questions: defaultQuestions, applications: demoApplications, invoices: demoInvoices, demo: true });
+  if (isLocalDemo()) return NextResponse.json({ settings: { ...defaultSettings, registration_open: false }, questions: defaultQuestions, applications: [], invoices: [], demo: false });
   try {
     const [settingsRows, questions, applications, invoices] = await Promise.all([
       supabaseRest<SiteSettings[]>('site_settings?id=eq.main&limit=1'),
